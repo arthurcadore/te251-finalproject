@@ -1,0 +1,43 @@
+query: '(SAR OR "Synthetic Aperture Radar") AND ("Neural Network" OR "Deep Learning" OR "Machine Learning" OR InSAR OR "Interferometric SAR*")'   
+
+# texto livre: palavras-chave, tema ou título
+
+bases_ativas:            # remova uma linha para desativar a base
+  - openalex
+  - semantic_scholar
+  - crossref
+  - arxiv
+  - pubmed
+  - europepmc
+  - core
+  - doaj
+  # - scielo             # desabilitada: sem busca por palavra-chave via API
+
+max_artigos_por_base: 100
+
+filtros:
+  ano_de: null           # ex.: 2020
+  ano_ate: null          # ex.: 2026
+  tipos: []              # subconjunto de: artigo, revisao, preprint, conferencia, livro_capitulo
+  idiomas: []            # códigos ISO 639-1: en, pt, es, ...
+  somente_oa: false
+  campo_busca: tudo      # tudo | titulo | titulo_resumo
+
+enriquecimento:
+  referencias: true      # lista de referências + contagem de citações quando faltar
+  resolver_ids_para_doi: true   # converte IDs internos (ex.: OpenAlex W...) em DOI quando possível
+  texto_completo: true   # CORE e Europe PMC (OA)
+
+saida:
+  diretorio: saida
+  raw_json: true         # inclui a resposta original da API em cada linha
+  separador_lista: " | "
+
+execucao:
+  max_paginas_extras_filtro_local: 10   # teto de páginas além do necessário quando há filtro local
+  cache_http: true                      # cache em disco das respostas (TTL 24 h)
+  timeout_s: 30
+  log_nivel: INFO
+
+limites:                 # sobrescreve os padrões da seção 7 (opcional)
+  # arxiv: {taxa_rps: 0.33, concorrencia: 1}
