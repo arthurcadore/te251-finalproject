@@ -89,6 +89,7 @@ O progresso aparece no terminal. Ao final, é impressa a pasta criada, por exemp
 | `relatorio.md` / `relatorio.json` | resumo da execução: status de cada base, artigos gravados, filtros aplicados, limites de taxa, duplicatas removidas |
 | `execucao.log` | log completo |
 | `config_usada.yaml` | configuração efetiva da execução (já com as sobrescritas da linha de comando) |
+| `ranking.csv` | gerado pela interface HTTP após a busca; mesmas colunas de `consolidado.csv` mais os campos de triagem LLM |
 
 Código de saída: `0` se ao menos uma base trouxe resultados; `1` se todas falharam ou foram puladas; `2` erro de configuração. Uma base que falha não interrompe as outras. As respostas das APIs ficam em cache por 24 h em `.cache/http/`, então repetir a mesma consulta no mesmo dia é rápido e não gasta cota.
 
@@ -125,3 +126,31 @@ Os exemplos são da linha `10.1111/pbi.13521` de uma execução real com a consu
 **Limitação de `referencias`:** a lista é a união das listas de cada base, e as bases identificam a mesma obra de formas diferentes (o OpenAlex por DOI, o PubMed por PMID). Uma mesma obra citada pode, portanto, aparecer duas vezes: uma como DOI e outra como `pmid:…`. No exemplo acima, as duas bases informam 10 referências cada: o OpenAlex lista as 10 como DOI e o PubMed lista 8 identificadores (como `pmid:…`); a união tem 17 itens, embora o artigo tenha 10 referências. Por isso `n_referencias` (10) é a contagem mais confiável.
 
 Os demais dados de cada artigo (afiliações, ORCID, periódico, ISSN, editora, volume, páginas, TLDR, FWCI, licença, acesso aberto, texto completo, financiadores, colunas exclusivas de cada base, resposta original da API etc.) continuam nos CSVs por base.
+
+## Interface local e ranking LLM
+
+A interface HTTP executa a busca e, em seguida, avalia cada linha do `consolidado.csv` com Ollama local. Consulta, demais parâmetros e critérios são informados na própria interface; ela não lê `config.yaml` nem `criteria.txt` como entrada. Para instalar/baixar o modelo uma vez:
+
+```bash
+ollama pull qwen3.5:0.8b
+```
+
+Com o serviço Ollama ativo e o `.env` preenchido, inicie o servidor local:
+
+```bash
+python -m coletor --web
+```
+
+Abra <http://127.0.0.1:8000>. Ao iniciar, a aplicação tenta iniciar `ollama serve` se o serviço ainda não estiver ativo e carrega o modelo padrão `qwen3.5:0.8b` para mantê-lo pronto. O modelo deve estar previamente instalado (`ollama pull qwen3.5:0.8b`); a aplicação não baixa modelos automaticamente. A tela tem uma aba lateral de nova pesquisa e outra de histórico, permite configurar parâmetros equivalentes ao YAML, editar critérios, escolher o modelo Ollama e acompanhar o andamento. O botão de salvar persiste os campos em `localStorage` do navegador. Para outra porta, use `--port 8080`. O servidor é ligado somente a `127.0.0.1`; as credenciais continuam exclusivamente no `.env` e não são exibidas na interface.
+
+Cada execução cria uma nova pasta dentro de `./saida/`, contendo `config.yaml`, `criterios.txt` e os artefatos da coleta. Após a busca, `ranking.csv` é salvo na mesma pasta. A aba Histórico lista as pastas existentes e permite baixar os arquivos. O ranking mantém as 16 colunas do consolidado e acrescenta `llm_label` (`incluido`, `duvidoso` ou `excluido`), `llm_match` (1, 0,5 ou 0), `llm_justification`, `llm_score` e `llm_status`. O arquivo é ordenado por `llm_score` decrescente; falhas individuais ficam no fim, com `llm_status=erro`.
+
+O score final é `0,70 × aderência + 0,15 × recência + 0,15 × citações`. Ano e citações são normalizados entre os artigos do consolidado; citações passam antes por `log(1 + n_citacoes)`. Metadados ausentes recebem valor neutro 0,5. A resposta estruturada do modelo deve incluir uma citação literal do resumo, verificada antes de ser aceita. Um erro de conexão, modelo ou validação de citação não interrompe a triagem dos demais artigos.
+
+Também é possível ranquear um CSV já existente sem iniciar uma nova busca:
+
+```bash
+python model/llm_pipeline.py saida/<execucao>/consolidado.csv --criteria "Critérios de inclusão e exclusão..."
+```
+
+Os arquivos da interface (HTML, CSS e JavaScript) ficam em `web/`. Os testes do ranking e da interface são offline; eles não iniciam o Ollama nem consultam bases acadêmicas.

@@ -1,0 +1,23 @@
+SCREENING CRITERIA
+Topic: solar sails in asteroid systems
+
+Review question:
+What attitude control methods are used to stabilize the orbit of solar sails in asteroid systems?
+
+1.INCLUDE (label = 1) if the paper:
+1.1.proposes, analyzes, or simulates a solar sail mission to an asteroid or asteroid system (rendezvous, orbiting, landing, deflection, mining, etc.)
+1.2.studies the orbital dynamics or control of a solar sail in the vicinity of an asteroid, including binary asteroids
+1.3.proposes a trajectory, guidance, or attitude control method applied to a solar sail with an asteroid as the target or environment
+1.4.treats the asteroid as central to the study (target, environment, or mission objective)
+
+2.EXCLUDE (label = 0) if the paper:
+2.1.addresses solar sails with no relation to asteroids (Moon, Mars, deep space, planetary missions, etc.)
+2.2.addresses asteroids without solar sails (e.g., electric propulsion only)
+2.3.mentions solar sails or asteroids only in passing (in the introduction, a list of examples, or future work)
+2.4.is only about sail materials or manufacturing, with no application to asteroids
+2.5.is not a technical study (editorial, news item, event summary)
+
+3.DOUBTFUL CASES:
+3.1.Only the title and abstract are available: decide based on them, without looking up the full paper.
+3.2.Solar sail and asteroid appear together, but the main focus is something else: mark 0.
+3.3.Magnetic sail, electric sail, or laser sail: mark 0, unless the paper compares it with a sol'ar sail for asteroids. (Adjust according to what you consider relevant.)

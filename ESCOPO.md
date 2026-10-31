@@ -1,6 +1,6 @@
 # Escopo fechado — Coletor multibase de artigos científicos
 
-Versão 1.2 · 31/10/2026 · Status: **fechado para implementação** (ajustado pelo teste prático e pelo CSV consolidado — ver seção 15)
+Versão 1.3 · 31/10/2026 · Status: **fechado para implementação** (ajustado pelo teste prático, CSV consolidado e decisão do usuário sobre triagem LLM/interface local — ver seções 15 e 16)
 
 Este documento é a especificação completa do projeto. Tudo o que não está aqui está fora do escopo. Orientações de execução para o Claude Code estão em `CLAUDE.md`.
 
@@ -8,7 +8,7 @@ Este documento é a especificação completa do projeto. Tudo o que não está a
 
 ## 1. Objetivo
 
-Ferramenta de linha de comando (Linux) que recebe uma consulta em texto livre (palavras-chave, nome de um tema ou título de um artigo), consulta **em paralelo** várias bases acadêmicas por APIs gratuitas e grava **um CSV por base** com o máximo de informação de cada artigo: identificadores, metadados bibliográficos, resumo, texto completo (quando a API entrega pronto), lista de referências, contagem de citações, indicadores de citação e trabalhos relacionados.
+Ferramenta para Linux com CLI e interface HTTP restrita a localhost. Recebe uma consulta em texto livre (palavras-chave, nome de um tema ou título de um artigo), consulta **em paralelo** várias bases acadêmicas por APIs gratuitas e grava **um CSV por base** e um consolidado. Opcionalmente, valida cada registro consolidado por critérios configuráveis usando Ollama local e grava `ranking.csv`.
 
 Uso: **acadêmico**, execução **pontual sob demanda**.
 
@@ -29,18 +29,21 @@ Uso: **acadêmico**, execução **pontual sob demanda**.
 | 9 | Formato | CSV RFC 4180, vírgula, todos os campos entre aspas, UTF-8 com BOM. Coluna `raw_json` incluída, com opção para desligar. |
 | 10 | Filtros | Período, tipo de documento, idioma, só acesso aberto, campo de busca. Filtro sem suporte nativo é aplicado localmente, com teto de páginas. |
 | 11 | Execução | Pontual, sob demanda. Sem agendamento nem coleta incremental. |
-| 12 | Ordenação | Nenhuma; usa a ordem padrão de cada API (em geral, relevância). |
+| 12 | Ordenação da coleta | Nenhuma; os CSVs por base e o consolidado usam a ordem padrão de cada API (em geral, relevância). O arquivo separado `ranking.csv` é ordenado pelo score LLM (seção 16). |
 | 13 | Limites de taxa | Taxa inicial por base + retentativa com espera + redução automática da taxa ao receber 429 (seção 7). |
+| 14 | Triagem LLM | Depois da busca, o Ollama local avalia título, resumo e palavras-chave do consolidado contra critérios digitados na interface. A justificativa inclui trecho literal do resumo, validado pelo programa. |
+| 15 | `ranking.csv` | Cópia das colunas do consolidado, mais colunas LLM; ordenado pelo score descendente. Fórmula: aderência 70%, recência 15%, citações 15%; citações usam `log(1+n)` e metadados ausentes recebem 0,5. |
+| 16 | Interface HTTP | Formulário para consulta, parâmetros YAML, critérios e modelo local. A aplicação só escuta em `127.0.0.1`; credenciais continuam no `.env`. |
 
 ---
 
 ## 3. Fora do escopo
 
-- Interface gráfica ou web; Docker; suporte a Windows/macOS.
+- Interface web remota/LAN; Docker; suporte a Windows/macOS; provedores LLM hospedados.
 - Bases pagas ou com assinatura institucional (Scopus, Web of Science, ScienceDirect); Google Scholar; raspagem de HTML.
 - Download de PDFs e extração de texto de PDFs; arquivos de texto separados do CSV.
 - Lista dos artigos que citam cada artigo (só a contagem).
-- Ordenação dos resultados; sobrescrita da consulta por base.
+- Ordenação dos resultados de busca por base; sobrescrita da consulta por base.
 - Agendamento, coleta incremental, retomada de execução interrompida.
 - Banco de dados.
 
@@ -454,6 +457,10 @@ Script `scripts/teste_pratico.py` que, para cada base, faz uma busca real pequen
 10. Referências preenchidas (nativas ou via OpenCitations) para artigos com DOI, quando a fonte as tiver.
 11. Nenhum segredo aparece em arquivos de saída ou logs.
 12. `pytest` passa sem acesso à internet (usa fixtures).
+13. A interface HTTP vincula-se somente a `127.0.0.1`, recebe e valida parâmetros e critérios digitados na tela, persiste as entradas no `localStorage` do navegador e não expõe credenciais. Não lê `config.yaml` nem `criteria.txt` como entrada.
+14. Depois da busca, `ranking.csv` preserva as 16 colunas do consolidado e acrescenta `llm_label`, `llm_match`, `llm_justification`, `llm_score` e `llm_status`; score decrescente e falhas no fim.
+15. O score inclui aderência, ano e `n_citacoes` nas proporções 70/15/15; citações são transformadas por `log(1+n)` e valores ausentes recebem 0,5.
+16. A citação produzida pelo modelo deve aparecer literalmente no resumo; falha em um artigo não interrompe os demais.
 
 ---
 
@@ -464,6 +471,7 @@ Script `scripts/teste_pratico.py` que, para cada base, faz uma busca real pequen
 3. **Demais bases:** Semantic Scholar, Crossref, PubMed, Europe PMC, CORE, DOAJ, SciELO (ou desabilitada).
 4. **Enriquecimento:** referências, conversão de IDs para DOI, OpenCitations, texto completo.
 5. **Testes, README e verificação dos critérios de aceite.**
+6. **Extensão autorizada (seção 16):** interface local e triagem LLM com geração de `ranking.csv`.
 
 **Etapa 2 (futura, fora desta versão):** sobrescrita da consulta por base; ordenação. (O CSV consolidado passou para esta versão — seção 15.4.)
 
@@ -523,3 +531,15 @@ O CSV consolidado sem duplicatas entre bases, antes previsto para a Etapa 2, pas
 Revisão do usuário (31/10/2026), depois da primeira versão: removidas do consolidado as colunas `id_consolidado`, `pmid`, `pmcid`, `arxiv_id`, `url_pagina`, `n_bases`, `acesso_aberto`, `status_oa`, `licenca` e `fonte_n_citacoes`; e só entram artigos com DOI e resumo (filtro aplicado depois da fusão). Resultado: 19 colunas (seção 9.5).
 
 Segunda revisão do usuário (31/10/2026): removidas também `fwci`, `tldr` e `issn`. Resultado: 16 colunas (seção 9.5).
+
+## 16. Adendo autorizado pelo usuário — triagem LLM e interface local (31/10/2026)
+
+- A busca continua sendo feita pelo coletor existente. Consulta, parâmetros equivalentes ao YAML, critérios de triagem e modelo são fornecidos na interface. O botão de salvar persiste os campos no `localStorage` do navegador; a tela não carrega `config.yaml` nem `criteria.txt`.
+- O processamento LLM usa o Ollama local (padrão `qwen3.5:0.8b`); não envia título/resumo a um serviço hospedado. O serviço Ollama precisa estar ativo e o modelo instalado. As APIs bibliográficas continuam sendo acessadas conforme as regras das seções 4 e 7.
+- `ranking.csv` é uma saída separada na pasta da execução. `consolidado.csv` e os CSVs por base não são alterados nem reordenados.
+- Colunas adicionais, na ordem: `llm_label`, `llm_match`, `llm_justification`, `llm_score`, `llm_status`. `llm_match` admite 1, 0,5 e 0; `llm_label` assume `incluido`, `duvidoso` e `excluido`. `llm_status` informa `ok` ou `erro`.
+- Fórmula: `0,70 × match + 0,15 × recência + 0,15 × citações`. Recência é min-max do ano no próprio consolidado; citações aplicam `log(1+n_citacoes)` antes do min-max. Componentes ausentes ou constantes recebem 0,5. Score é arredondado a três casas.
+- O HTML, CSS e JavaScript ficam em `web/` e são servidos por `python -m coletor --web` em `http://127.0.0.1:8000` (porta configurável). Cada execução cria uma nova pasta dentro de `./saida/`, contendo `config.yaml`, `criterios.txt`, `config_usada.yaml` e os demais artefatos, incluindo `ranking.csv` quando a triagem termina. O histórico lista pastas e permite baixar arquivos. Nenhum formulário de entrada é lido de YAML/TXT nem segredo é coletado pela interface.
+- Ao iniciar o servidor web, a aplicação tenta iniciar `ollama serve` se ainda não estiver acessível e aquece o modelo padrão `qwen3.5:0.8b`, desde que já esteja instalado localmente. Não baixa automaticamente modelos grandes. O serviço iniciado pela aplicação é encerrado no desligamento do servidor; um serviço Ollama que já estava ativo não é encerrado.
+- A ferramenta grava uma justificativa com citação literal do resumo e rejeita a resposta se o trecho não for encontrado no texto. Erros individuais não interrompem as avaliações restantes; registros com erro têm score vazio e ficam ao fim do ranking.
+- A interface não permite acesso remoto, não oferece login, não edita o `.env`, e não permite escolher provedores externos.

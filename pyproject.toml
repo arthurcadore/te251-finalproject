@@ -14,6 +14,9 @@ dependencies = [
     "pyyaml>=6.0",
     "python-dotenv>=1.0",
     "lxml>=5.0",
+    "ollama>=0.5",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
 ]
 
 [project.optional-dependencies]
@@ -25,6 +28,9 @@ dev = [
 
 [tool.setuptools.packages.find]
 include = ["coletor*"]
+
+[tool.setuptools.data-files]
+"share/coletor-artigos/web" = ["web/index.html", "web/styles.css", "web/forms.css", "web/app.js"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

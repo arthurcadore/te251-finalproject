@@ -4,6 +4,9 @@ pydantic>=2.6
 PyYAML>=6.0
 python-dotenv>=1.0
 lxml>=5.0
+ollama>=0.5
+fastapi>=0.115
+uvicorn>=0.30
 
 # Dependências de desenvolvimento e testes
 pytest>=8.0

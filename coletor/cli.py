@@ -29,6 +29,8 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--max", type=int, help="máximo de artigos por base (sobrescreve `max_artigos_por_base`)")
     p.add_argument("--bases", help="bases separadas por vírgula (sobrescreve `bases_ativas`)")
     p.add_argument("--sem-raw-json", action="store_true", help="omite a coluna raw_json")
+    p.add_argument("--web", action="store_true", help="abre a interface HTTP local em 127.0.0.1")
+    p.add_argument("--port", type=int, default=8000, help="porta da interface HTTP (padrão: 8000)")
     p.add_argument("--listar-bases", action="store_true",
                    help="mostra bases, status (ativa/inativa) e credenciais detectadas")
     return p
@@ -68,6 +70,16 @@ def listar_bases(ativas: list[str] | None, cred: Credenciais) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    if args.web:
+        if not 1 <= args.port <= 65535:
+            print("erro: --port deve estar entre 1 e 65535", file=sys.stderr)
+            return 2
+        import uvicorn
+
+        print(f"Interface local em http://127.0.0.1:{args.port} (Ctrl+C para encerrar)")
+        uvicorn.run("coletor.web:app", host="127.0.0.1", port=args.port, reload=False)
+        return 0
+
     load_dotenv(find_dotenv(usecwd=True))
     cred = Credenciais.do_ambiente()
     registrar(cred)

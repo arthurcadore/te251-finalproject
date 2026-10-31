@@ -4,7 +4,7 @@ Você vai implementar o **Coletor multibase de artigos científicos**. A especif
 
 ## Regras gerais
 
-- **O escopo é fechado.** Não adicione bases, funcionalidades, dependências pesadas, interface gráfica, Docker ou banco de dados que não estejam no `ESCOPO.md`. Itens da "Etapa 2" (ordenação, sobrescrita de consulta) **não** devem ser implementados. O CSV consolidado foi trazido para esta versão por decisão do usuário (ESCOPO 9.5 e 15.4).
+- **O escopo é fechado.** Não adicione bases, funcionalidades, dependências pesadas, interface web remota, Docker ou banco de dados que não estejam no `ESCOPO.md`. A interface HTTP restrita a `127.0.0.1` e o ranking local por Ollama foram autorizados pelo usuário e adicionados na seção 16. Itens da "Etapa 2" (ordenação das buscas por base, sobrescrita da consulta por base) **não** devem ser implementados. O CSV consolidado foi trazido para esta versão por decisão do usuário (ESCOPO 9.5 e 15.4).
 - Se algo no escopo for impossível ou estiver errado na prática, **não improvise silenciosamente**: aplique as regras de decisão da seção 11 do `ESCOPO.md`; para qualquer caso não coberto, pare e pergunte ao usuário, explicando o problema e propondo opções.
 - Ambiente-alvo: **Linux**, Python **3.11+**, ambiente virtual (`python -m venv .venv`). Sem Docker.
 - Código (nomes de módulos, classes, funções) em inglês ou português, mas **consistente**; os **nomes das colunas do CSV, chaves do `config.yaml` e mensagens ao usuário seguem exatamente o `ESCOPO.md`** (português).
@@ -35,6 +35,12 @@ Tabela da seção 8.1: referências nativas, conversão de IDs OpenAlex para DOI
 
 ### Fase 5 — Fechamento
 `README.md` (instalação, `.env`, `config.yaml`, uso da CLI, descrição das colunas, limitações conhecidas, aviso do limite de 32.767 caracteres por célula no Excel). Rode uma execução real com a consulta de exemplo e verifique **cada item** dos critérios de aceite (seção 12), registrando o resultado em `docs/verificacao_aceite.md`.
+
+### Fase 6 — Extensão autorizada: interface e ranking LLM
+1. Interface local em HTTP, vinculada somente a `127.0.0.1`, para preencher parâmetros equivalentes ao YAML e critérios de triagem; formulário não carrega YAML/TXT e salva preferências no `localStorage`; credenciais continuam apenas no `.env`.
+2. Após a busca, avaliar `consolidado.csv` com Ollama local e gerar `ranking.csv` preservando as colunas originais e acrescentando campos LLM.
+3. Score: 70% aderência, 15% recência, 15% citações (com `log(1+n_citacoes)`); metadados ausentes recebem 0,5. Validar citação literal do resumo.
+4. Testes offline para score, saída, falhas por artigo e endpoints da interface; atualizar README e ESCOPO seção 16.
 
 ## Padrões de implementação
 

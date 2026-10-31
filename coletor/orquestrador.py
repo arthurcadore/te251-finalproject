@@ -72,11 +72,13 @@ async def executar(
     cred: Credenciais,
     *,
     dir_cache: Path = DIR_CACHE,
+    dir_saida_override: Path | None = None,
     opcoes_limitador: dict | None = None,
 ) -> tuple[int, Path]:
     """Roda todas as bases ativas em paralelo. Devolve (código de saída, diretório da execução)."""
     inicio, inicio_iso = time.monotonic(), _agora_iso()
-    dir_saida = diretorio_execucao(config, datetime.now())
+    dir_saida = dir_saida_override or diretorio_execucao(config, datetime.now())
+    dir_saida.mkdir(parents=True, exist_ok=True)
     handlers = configurar_log(config.execucao.log_nivel, dir_saida / "execucao.log")
     try:
         (dir_saida / "config_usada.yaml").write_text(

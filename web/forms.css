@@ -1,0 +1,31 @@
+/* Keep native controls and action buttons aligned with the application typography. */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+.nav-item {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.button {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.field input[type="text"],
+.field input[type="number"],
+.field select,
+.field textarea {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.criteria-field textarea,
+.field textarea.code-field {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
