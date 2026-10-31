@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import ipaddress
+import os
 import sys
 from pathlib import Path
 
@@ -29,7 +31,9 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--max", type=int, help="máximo de artigos por base (sobrescreve `max_artigos_por_base`)")
     p.add_argument("--bases", help="bases separadas por vírgula (sobrescreve `bases_ativas`)")
     p.add_argument("--sem-raw-json", action="store_true", help="omite a coluna raw_json")
-    p.add_argument("--web", action="store_true", help="abre a interface HTTP local em 127.0.0.1")
+    p.add_argument("--web", "--gui", dest="web", action="store_true",
+                   help="abre a interface HTTP (padrão: todas as interfaces; exige token)")
+    p.add_argument("--host", default="0.0.0.0", help="endereço de bind web (padrão: 0.0.0.0)")
     p.add_argument("--port", type=int, default=8000, help="porta da interface HTTP (padrão: 8000)")
     p.add_argument("--listar-bases", action="store_true",
                    help="mostra bases, status (ativa/inativa) e credenciais detectadas")
@@ -74,10 +78,24 @@ def main(argv: list[str] | None = None) -> int:
         if not 1 <= args.port <= 65535:
             print("erro: --port deve estar entre 1 e 65535", file=sys.stderr)
             return 2
+        load_dotenv(find_dotenv(usecwd=True))
+        try:
+            host_local = args.host.casefold() == "localhost" or ipaddress.ip_address(args.host).is_loopback
+        except ValueError:
+            host_local = False
+        if not host_local and len(os.getenv("COLETOR_WEB_TOKEN", "")) < 32:
+            print(
+                "erro: para expor a interface na rede, defina COLETOR_WEB_TOKEN no .env "
+                "com pelo menos 32 caracteres aleatórios.",
+                file=sys.stderr,
+            )
+            return 2
         import uvicorn
 
-        print(f"Interface local em http://127.0.0.1:{args.port} (Ctrl+C para encerrar)")
-        uvicorn.run("coletor.web:app", host="127.0.0.1", port=args.port, reload=False)
+        print(f"Interface web em http://{args.host}:{args.port} (Ctrl+C para encerrar)")
+        if not host_local:
+            print("Acesso remoto protegido por página de login e sessão; use HTTPS via proxy reverso.")
+        uvicorn.run("coletor.web:app", host=args.host, port=args.port, reload=False)
         return 0
 
     load_dotenv(find_dotenv(usecwd=True))

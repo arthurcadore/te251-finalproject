@@ -33,13 +33,13 @@ Uso: **acadêmico**, execução **pontual sob demanda**.
 | 13 | Limites de taxa | Taxa inicial por base + retentativa com espera + redução automática da taxa ao receber 429 (seção 7). |
 | 14 | Triagem LLM | Depois da busca, o Ollama local avalia título, resumo e palavras-chave do consolidado contra critérios digitados na interface. A justificativa inclui trecho literal do resumo, validado pelo programa. |
 | 15 | `ranking.csv` | Cópia das colunas do consolidado, mais colunas LLM; ordenado pelo score descendente. Fórmula: aderência 70%, recência 15%, citações 15%; citações usam `log(1+n)` e metadados ausentes recebem 0,5. |
-| 16 | Interface HTTP | Formulário para consulta, parâmetros YAML, critérios e modelo local. A aplicação só escuta em `127.0.0.1`; credenciais continuam no `.env`. |
+| 16 | Interface HTTP | Formulário para consulta, parâmetros equivalentes ao YAML, critérios e modelo local. O bind padrão é `0.0.0.0`; clientes remotos entram por página de login com token e sessão segura; recomenda-se proxy reverso HTTPS. Credenciais continuam no `.env`. |
 
 ---
 
 ## 3. Fora do escopo
 
-- Interface web remota/LAN; Docker; suporte a Windows/macOS; provedores LLM hospedados.
+- Exposição sem autenticação ou sem HTTPS/TLS à Internet; Docker; suporte a Windows/macOS; provedores LLM hospedados.
 - Bases pagas ou com assinatura institucional (Scopus, Web of Science, ScienceDirect); Google Scholar; raspagem de HTML.
 - Download de PDFs e extração de texto de PDFs; arquivos de texto separados do CSV.
 - Lista dos artigos que citam cada artigo (só a contagem).
@@ -457,7 +457,7 @@ Script `scripts/teste_pratico.py` que, para cada base, faz uma busca real pequen
 10. Referências preenchidas (nativas ou via OpenCitations) para artigos com DOI, quando a fonte as tiver.
 11. Nenhum segredo aparece em arquivos de saída ou logs.
 12. `pytest` passa sem acesso à internet (usa fixtures).
-13. A interface HTTP vincula-se somente a `127.0.0.1`, recebe e valida parâmetros e critérios digitados na tela, persiste as entradas no `localStorage` do navegador e não expõe credenciais. Não lê `config.yaml` nem `criteria.txt` como entrada.
+13. A interface HTTP recebe e valida parâmetros e critérios digitados na tela, persiste as entradas no `localStorage` do navegador e não expõe credenciais. Não lê `config.yaml` nem `criteria.txt` como entrada. Acesso não local exige token forte e POST remoto valida a origem.
 14. Depois da busca, `ranking.csv` preserva as 16 colunas do consolidado e acrescenta `llm_label`, `llm_match`, `llm_justification`, `llm_score` e `llm_status`; score decrescente e falhas no fim.
 15. O score inclui aderência, ano e `n_citacoes` nas proporções 70/15/15; citações são transformadas por `log(1+n)` e valores ausentes recebem 0,5.
 16. A citação produzida pelo modelo deve aparecer literalmente no resumo; falha em um artigo não interrompe os demais.
@@ -539,7 +539,8 @@ Segunda revisão do usuário (31/10/2026): removidas também `fwci`, `tldr` e `i
 - `ranking.csv` é uma saída separada na pasta da execução. `consolidado.csv` e os CSVs por base não são alterados nem reordenados.
 - Colunas adicionais, na ordem: `llm_label`, `llm_match`, `llm_justification`, `llm_score`, `llm_status`. `llm_match` admite 1, 0,5 e 0; `llm_label` assume `incluido`, `duvidoso` e `excluido`. `llm_status` informa `ok` ou `erro`.
 - Fórmula: `0,70 × match + 0,15 × recência + 0,15 × citações`. Recência é min-max do ano no próprio consolidado; citações aplicam `log(1+n_citacoes)` antes do min-max. Componentes ausentes ou constantes recebem 0,5. Score é arredondado a três casas.
-- O HTML, CSS e JavaScript ficam em `web/` e são servidos por `python -m coletor --web` em `http://127.0.0.1:8000` (porta configurável). Cada execução cria uma nova pasta dentro de `./saida/`, contendo `config.yaml`, `criterios.txt`, `config_usada.yaml` e os demais artefatos, incluindo `ranking.csv` quando a triagem termina. O histórico lista pastas e permite baixar arquivos. Nenhum formulário de entrada é lido de YAML/TXT nem segredo é coletado pela interface.
+- O HTML, CSS e JavaScript ficam em `web/` e são servidos por `python -m coletor --web` em `0.0.0.0:8000` por padrão (host e porta configuráveis). Cada execução cria uma nova pasta dentro de `./saida/`, contendo `config.yaml`, `criterios.txt`, `config_usada.yaml` e os demais artefatos, incluindo `ranking.csv` quando a triagem termina. O histórico lista pastas e permite baixar arquivos. Nenhum formulário de entrada é lido de YAML/TXT nem segredo é coletado pela interface.
 - Ao iniciar o servidor web, a aplicação tenta iniciar `ollama serve` se ainda não estiver acessível e aquece o modelo padrão `qwen3.5:0.8b`, desde que já esteja instalado localmente. Não baixa automaticamente modelos grandes. O serviço iniciado pela aplicação é encerrado no desligamento do servidor; um serviço Ollama que já estava ativo não é encerrado.
 - A ferramenta grava uma justificativa com citação literal do resumo e rejeita a resposta se o trecho não for encontrado no texto. Erros individuais não interrompem as avaliações restantes; registros com erro têm score vazio e ficam ao fim do ranking.
-- A interface não permite acesso remoto, não oferece login, não edita o `.env`, e não permite escolher provedores externos.
+- A interface não edita o `.env` e não permite escolher provedores externos. Clientes fora de loopback usam página de login com `COLETOR_WEB_TOKEN` (mínimo 32 caracteres), sessão HMAC em cookie HttpOnly/Secure/SameSite, expiração de 12 h, limite de tentativas e verificação de origem em POST; acesso à Internet deve ser servido por proxy reverso HTTPS/TLS.
+- O seletor de modelos enumera apenas modelos locais retornados pelo endpoint Ollama `list`; uma seleção alternativa é carregada no começo da pesquisa. O uso de acelerador é delegado ao Ollama, sem opção de forçar CPU/GPU no código; a UI exibe uma estimativa de alocação calculada com `size_vram / size` de `ollama ps`.

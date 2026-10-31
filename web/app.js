@@ -4,6 +4,9 @@
   const views = { nova: $("view-nova"), historico: $("view-historico") };
   let lastRunStage = "ocioso";
   let toastTimer;
+  let preferredModel = "qwen3.5:0.8b";
+  let modelRefreshInProgress = false;
+  let selectModelsRequested = false;
 
   const checkedValues = (id) => [...document.querySelectorAll(`#${id} input[type=checkbox]:checked`)].map((item) => item.value);
   const fillChecks = (id, values = []) => document.querySelectorAll(`#${id} input[type=checkbox]`).forEach((item) => { item.checked = values.includes(item.value); });
@@ -60,7 +63,7 @@
     $("cache").checked = exec.cache_http ?? true;
     $("limites").value = JSON.stringify(config.limites || {}, null, 2);
     $("criteria").value = data.criteria || "";
-    $("model").value = data.model || "qwen3.5:0.8b";
+    preferredModel = data.model || "qwen3.5:0.8b";
   }
 
   function makePayload() {
@@ -106,8 +109,55 @@
   async function fetchJson(url, options = {}) {
     const response = await fetch(url, options);
     const result = await response.json();
+    if (response.status === 401 && result.login) {
+      window.location.replace(result.login);
+      throw new Error("Sua sessão expirou. Entre novamente.");
+    }
     if (!response.ok) throw new Error(result.detail || "Não foi possível concluir a operação.");
     return result;
+  }
+
+  async function refreshModels() {
+    if (modelRefreshInProgress) return;
+    modelRefreshInProgress = true;
+    const select = $("model");
+    const button = $("refresh-models");
+    button.disabled = true;
+    try {
+      const result = await fetchJson("/api/models", { cache: "no-store" });
+      select.replaceChildren();
+      const models = result.models || [];
+      if (!models.length) {
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Nenhum modelo disponível";
+        select.append(placeholder);
+        select.disabled = true;
+        $("models-hint").textContent = result.error || "Baixe um modelo no servidor Ollama e atualize a lista.";
+        return;
+      }
+
+      for (const model of models) {
+        const option = document.createElement("option");
+        option.value = model.name;
+        const info = [model.parameter_size, model.family].filter(Boolean).join(" · ");
+        option.textContent = info ? `${model.name} — ${info}` : model.name;
+        select.append(option);
+      }
+      const names = models.map((model) => model.name);
+      const selected = names.includes(preferredModel)
+        ? preferredModel
+        : names.includes("qwen3.5:0.8b") ? "qwen3.5:0.8b" : names[0];
+      select.value = selected;
+      select.disabled = false;
+      preferredModel = selected;
+      $("models-hint").textContent = `${models.length} modelo(s) instalado(s). O selecionado será carregado ao iniciar a pesquisa.`;
+    } catch (error) {
+      $("models-hint").textContent = error.message;
+    } finally {
+      button.disabled = false;
+      modelRefreshInProgress = false;
+    }
   }
 
   function fileIcon(filename) {
@@ -192,6 +242,15 @@
       label.textContent = "Iniciando Ollama…";
       secondary.textContent = "Iniciando serviço e carregando modelo…";
     }
+    const accelerator = status.ollama_accelerator || "não informado";
+    $("gpu-status").textContent = accelerator;
+    const acceleratorDot = document.querySelector(".accelerator-dot");
+    acceleratorDot.classList.toggle("gpu", accelerator.includes("GPU") && !accelerator.startsWith("0%"));
+    acceleratorDot.classList.toggle("cpu", accelerator.startsWith("0% GPU"));
+    if ((status.ollama_status === "pronto" || status.ollama_status === "erro") && !selectModelsRequested) {
+      selectModelsRequested = true;
+      refreshModels();
+    }
   }
 
   function updateStatus(status) {
@@ -246,6 +305,17 @@
     }
   });
   $("refresh-history").addEventListener("click", refreshHistory);
+  $("refresh-models").addEventListener("click", refreshModels);
+  $("model").addEventListener("change", () => { preferredModel = $("model").value; });
+  $("logout").addEventListener("click", async () => {
+    try {
+      await fetchJson("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+      localStorage.removeItem(STORAGE_KEY);
+      window.location.replace("/login");
+    } catch (error) {
+      notify(error.message, true);
+    }
+  });
   $("new-from-empty").addEventListener("click", () => setView("nova"));
   $("open-history").addEventListener("click", () => setView("historico"));
 

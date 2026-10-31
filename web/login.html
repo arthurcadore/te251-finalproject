@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f7fc">
+  <title>Entrar · Coletor</title>
+  <link rel="stylesheet" href="/assets/login.css">
+  <script src="/assets/login.js" defer></script>
+</head>
+<body>
+  <main class="login-shell">
+    <section class="login-card" aria-labelledby="login-title">
+      <div class="brand-mark">C</div>
+      <p class="eyebrow">COLETOR MULTIBASE</p>
+      <h1 id="login-title">Bem-vindo de volta</h1>
+      <p class="subtitle">Entre para acessar as pesquisas e os arquivos deste servidor.</p>
+      <form id="login-form" autocomplete="on">
+        <label for="token">Token de acesso</label>
+        <div class="token-wrap">
+          <input id="token" name="password" type="password" autocomplete="current-password" placeholder="Digite seu token" required autofocus>
+          <button type="button" id="toggle-token" aria-label="Mostrar token">Mostrar</button>
+        </div>
+        <p id="message" class="message" role="alert" aria-live="polite"></p>
+        <button id="submit" class="submit" type="submit"><span id="submit-label">Entrar</span><span id="spinner" class="spinner hidden"></span></button>
+      </form>
+      <p class="security-note"><span aria-hidden="true">▣</span> Sua sessão é protegida e expira após 12 horas. Use HTTPS no servidor.</p>
+    </section>
+    <footer>Coletor de artigos científicos <span>·</span> Acesso restrito</footer>
+  </main>
+</body>
+</html>

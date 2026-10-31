@@ -7,6 +7,8 @@
   <title>Coletor de artigos científicos</title>
   <link rel="stylesheet" href="/assets/styles.css">
   <link rel="stylesheet" href="/assets/forms.css">
+  <link rel="stylesheet" href="/assets/model.css">
+  <link rel="stylesheet" href="/assets/session.css">
 </head>
 <body>
   <div class="app-shell">
@@ -21,8 +23,9 @@
         <button class="nav-item" data-view="historico"><span class="nav-icon">◷</span><span>Histórico de pesquisas</span><span class="nav-count" id="history-count">0</span></button>
       </nav>
       <div class="sidebar-bottom">
-        <div class="local-indicator"><span></span><div><strong>Execução local</strong><small>Dados neste computador</small></div></div>
+        <div class="local-indicator"><span></span><div><strong>Execução no servidor</strong><small>Dados neste servidor</small></div></div>
         <div class="ollama-small"><span class="ollama-dot" id="ollama-dot"></span><span id="ollama-label">Ollama verificando…</span></div>
+        <button class="logout-button" id="logout" type="button">Sair da sessão</button>
       </div>
     </aside>
 
@@ -104,11 +107,18 @@
           <section class="panel criteria-panel">
             <div class="panel-heading"><div class="panel-icon violet">✳</div><div><h2>Critérios de triagem</h2><p>Oriente o modelo para classificar os artigos.</p></div></div>
             <div class="field criteria-field"><label for="criteria">Critérios para o modelo <span class="required">*</span></label><textarea id="criteria" placeholder="Descreva os critérios de inclusão, exclusão e como tratar casos duvidosos…"></textarea><small>Estes critérios serão salvos em criterios.txt dentro da pasta desta pesquisa.</small></div>
-            <div class="field"><label for="model">Modelo Ollama</label><input id="model" type="text" value="qwen3.5:0.8b"><small>O Ollama será iniciado ao abrir a interface. O modelo deve estar instalado localmente.</small></div>
             <div class="score-card"><span class="score-symbol">↗</span><div><strong>Como funciona o ranking</strong><p>70% aderência · 15% recência · 15% citações (logarítmico). Dados ausentes recebem valor neutro 0,5.</p></div></div>
             <div class="privacy-note"><span>⌑</span><p>A triagem roda localmente. A justificativa do modelo precisa citar literalmente o resumo; o sistema valida essa evidência.</p></div>
           </section>
         </div>
+        <section class="model-panel">
+          <div class="model-heading"><div class="panel-icon green">◉</div><div><h2>Modelo de triagem</h2><p>Selecione um modelo já instalado no servidor Ollama.</p></div></div>
+          <div class="model-controls">
+            <div class="field model-select-field"><label for="model">Modelo disponível</label><select id="model" disabled><option value="">Carregando modelos Ollama…</option></select><small id="models-hint">A lista vem diretamente do Ollama.</small></div>
+            <button class="button button-soft model-refresh" id="refresh-models" type="button">↻ Atualizar modelos</button>
+            <div class="accelerator-chip"><span class="accelerator-dot"></span><div><strong>Aceleração</strong><small id="gpu-status">Ollama informa uso de CPU/GPU após carregar o modelo.</small></div></div>
+          </div>
+        </section>
       </section>
 
       <section id="view-historico" class="view">
@@ -116,7 +126,7 @@
         <div id="history-list" class="history-list"></div>
         <div id="history-empty" class="empty-state hidden"><div class="empty-icon">▤</div><strong>Nenhuma pesquisa encontrada</strong><p>Quando você executar uma busca, os arquivos dela aparecerão aqui.</p><button class="button button-primary" id="new-from-empty">Iniciar nova pesquisa</button></div>
       </section>
-      <footer class="page-footer"><span>Coletor multibase de artigos científicos</span><span>Localhost · Credenciais lidas de .env</span></footer>
+      <footer class="page-footer"><span>Coletor multibase de artigos científicos</span><span>Acesso remoto autenticado · Credenciais lidas de .env</span></footer>
     </main>
   </div>
   <script src="/assets/app.js" defer></script>

@@ -1,9 +1,13 @@
-"""Local-only HTTP interface for collection and LLM ranking."""
+"""HTTP interface for collection and LLM ranking; remote clients require a token."""
 
 from __future__ import annotations
 
 import asyncio
 import contextlib
+import hmac
+import ipaddress
+import os
+import secrets
 import shutil
 import subprocess
 import sys
@@ -13,11 +17,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 from contextlib import asynccontextmanager
+from urllib.parse import urlsplit
 
 import ollama
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 import yaml
@@ -35,6 +40,10 @@ if not WEB_PATH.is_dir():
 UI_PATH = WEB_PATH / "index.html"
 _ollama_process: subprocess.Popen | None = None
 _ollama_lock = threading.Lock()
+SESSION_COOKIE = "coletor_session"
+SESSION_MAX_AGE_S = 12 * 60 * 60
+_login_attempts: dict[str, list[float]] = {}
+_login_attempts_lock = threading.Lock()
 
 _state_lock = threading.Lock()
 _job_state: dict[str, Any] = {
@@ -48,6 +57,7 @@ _job_state: dict[str, Any] = {
     "ollama_status": "iniciando",
     "ollama_model": DEFAULT_MODEL,
     "ollama_error": "",
+    "ollama_accelerator": "não informado",
 }
 
 
@@ -57,6 +67,12 @@ class InterfaceRequest(BaseModel):
     config: dict[str, Any]
     criteria: str = Field(min_length=1)
     model: str = Field(min_length=1, max_length=200)
+
+
+class LoginRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    token: str = Field(min_length=1, max_length=512)
 
 
 def _config_padrao() -> dict[str, Any]:
@@ -70,6 +86,67 @@ def _config_padrao() -> dict[str, Any]:
         "execucao": {"max_paginas_extras_filtro_local": 10, "cache_http": True, "timeout_s": 30, "log_nivel": "INFO"},
         "limites": {},
     }
+
+
+_PROXY_HEADERS = ("forwarded", "x-forwarded-for", "x-forwarded-host", "x-real-ip")
+
+
+def _cliente_remoto(request: Request) -> bool:
+    # A same-host reverse proxy shows up as loopback; forwarded requests are never treated as local.
+    if any(h in request.headers for h in _PROXY_HEADERS):
+        return True
+    host = request.client.host if request.client else ""
+    try:
+        return not ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return True
+
+
+def _assinar_sessao(token: str, emitida_em: int, nonce: str) -> str:
+    payload = f"{emitida_em}.{nonce}"
+    return hmac.new(token.encode(), f"coletor-session:{payload}".encode(), "sha256").hexdigest()
+
+
+def _sessao_valida(cookie: str | None, token: str, agora: int | None = None) -> bool:
+    if not cookie or len(token) < 32:
+        return False
+    try:
+        emitida_str, nonce, assinatura = cookie.split(".", 2)
+        emitida_em = int(emitida_str)
+    except ValueError:
+        return False
+    agora = int(time.time()) if agora is None else agora
+    if emitida_em > agora + 60 or agora - emitida_em > SESSION_MAX_AGE_S:
+        return False
+    esperado = _assinar_sessao(token, emitida_em, nonce)
+    return hmac.compare_digest(assinatura, esperado)
+
+
+def _origem_permitida(request: Request) -> bool:
+    origin = request.headers.get("origin", "")
+    host = request.headers.get("host", "")
+    if not origin or not host:
+        return False
+    parsed = urlsplit(origin)
+    # Proxies may rewrite Host; browsers cannot forge X-Forwarded-Host on cross-site requests.
+    hosts = {host.casefold(), request.headers.get("x-forwarded-host", "").split(",")[0].strip().casefold()}
+    return parsed.netloc.casefold() in hosts and parsed.scheme.casefold() == request.url.scheme.casefold()
+
+
+def _conexao_https(request: Request) -> bool:
+    return request.url.scheme.casefold() == "https"
+
+
+def _permitir_tentativa_login(client_ip: str) -> bool:
+    agora = time.monotonic()
+    with _login_attempts_lock:
+        tentativas = [t for t in _login_attempts.get(client_ip, []) if agora - t < 900]
+        if len(tentativas) >= 10:
+            _login_attempts[client_ip] = tentativas
+            return False
+        tentativas.append(agora)
+        _login_attempts[client_ip] = tentativas
+        return True
 
 
 def _carregar_modelo(modelo: str) -> None:
@@ -116,6 +193,28 @@ def _carregar_modelo(modelo: str) -> None:
             options={"num_predict": 1},
             keep_alive=-1,
         )
+        try:
+            acelerador = _resumo_acelerador(ollama.ps().models, modelo)
+        except Exception:  # noqa: BLE001 — telemetry must not fail the actual model load
+            acelerador = "Ollama não informou alocação"
+        _atualizar_estado(ollama_accelerator=acelerador)
+
+
+def _resumo_acelerador(processos: Any, modelo: str) -> str:
+    """Infer CPU/GPU split from Ollama's reported VRAM and total model memory."""
+    processo = next(
+        (p for p in processos if getattr(p, "model", None) in {modelo, f"{modelo}:latest"}),
+        None,
+    )
+    if processo is None:
+        return "nenhum modelo ativo"
+    total = int(getattr(processo, "size", 0) or 0)
+    vram = int(getattr(processo, "size_vram", 0) or 0)
+    if total <= 0:
+        return "acelerador não informado pelo Ollama"
+    gpu_percent = min(100, max(0, round(vram * 100 / total)))
+    cpu_percent = 100 - gpu_percent
+    return f"{gpu_percent}% GPU · {cpu_percent}% CPU"
 
 
 def _iniciar_ollama() -> None:
@@ -214,6 +313,56 @@ def index() -> FileResponse:
     return FileResponse(UI_PATH, media_type="text/html; charset=utf-8")
 
 
+@app.get("/login", response_class=FileResponse)
+def login_page() -> FileResponse:
+    return FileResponse(WEB_PATH / "login.html", media_type="text/html; charset=utf-8")
+
+
+@app.get("/api/auth/session")
+def auth_session(request: Request) -> dict[str, bool]:
+    if not _cliente_remoto(request):
+        return {"authenticated": True, "configured": True}
+    token = os.getenv("COLETOR_WEB_TOKEN", "")
+    valid = _sessao_valida(request.cookies.get(SESSION_COOKIE), token)
+    return {"authenticated": valid, "configured": len(token) >= 32}
+
+
+@app.post("/api/auth/login")
+def auth_login(payload: LoginRequest, request: Request, response: Response) -> dict[str, str]:
+    token = os.getenv("COLETOR_WEB_TOKEN", "")
+    if len(token) < 32:
+        raise HTTPException(status_code=503, detail="Login remoto não configurado no servidor.")
+    client_ip = request.client.host if request.client else "desconhecido"
+    if not _permitir_tentativa_login(client_ip):
+        raise HTTPException(status_code=429, detail="Muitas tentativas. Aguarde 15 minutos e tente novamente.")
+    if not hmac.compare_digest(payload.token, token):
+        raise HTTPException(status_code=401, detail="Token inválido.")
+
+    with _login_attempts_lock:
+        _login_attempts.pop(client_ip, None)
+    issued = int(time.time())
+    nonce = secrets.token_urlsafe(18)
+    session = f"{issued}.{nonce}.{_assinar_sessao(token, issued, nonce)}"
+    response.set_cookie(
+        key=SESSION_COOKIE,
+        value=session,
+        max_age=SESSION_MAX_AGE_S,
+        httponly=True,
+        secure=_conexao_https(request),
+        samesite="strict",
+        path="/",
+    )
+    return {"message": "Login efetuado."}
+
+
+@app.post("/api/auth/logout")
+def auth_logout(request: Request, response: Response) -> dict[str, str]:
+    response.delete_cookie(
+        key=SESSION_COOKIE, path="/", httponly=True, secure=_conexao_https(request), samesite="strict"
+    )
+    return {"message": "Sessão encerrada."}
+
+
 @app.get("/api/history")
 def history() -> list[dict[str, Any]]:
     SAIDA_PATH.mkdir(parents=True, exist_ok=True)
@@ -238,6 +387,26 @@ def history_file(research_id: str, filename: str) -> FileResponse:
 @app.get("/api/config")
 def get_config() -> dict[str, Any]:
     return {"config": _config_padrao(), "criteria": "", "model": DEFAULT_MODEL}
+
+
+@app.get("/api/models")
+def get_models() -> dict[str, Any]:
+    try:
+        models = []
+        for item in ollama.list().models:
+            nome = getattr(item, "model", None) or getattr(item, "name", None)
+            if not nome:
+                continue
+            details = getattr(item, "details", None)
+            models.append({
+                "name": nome,
+                "size": int(getattr(item, "size", 0) or 0),
+                "family": getattr(details, "family", None),
+                "parameter_size": getattr(details, "parameter_size", None),
+            })
+        return {"models": models, "error": ""}
+    except Exception as erro:  # noqa: BLE001 — expose a recoverable status for the UI
+        return {"models": [], "error": f"{type(erro).__name__}: Ollama indisponível"}
 
 
 @app.post("/api/run")
@@ -273,3 +442,34 @@ def start_run(payload: InterfaceRequest) -> dict[str, str]:
 def get_status() -> dict[str, Any]:
     with _state_lock:
         return dict(_job_state)
+
+
+@app.middleware("http")
+async def protect_remote_access(request, call_next):
+    """Require signed cookie sessions for remote clients, without browser Basic Auth prompts."""
+    if not _cliente_remoto(request):
+        return await call_next(request)
+
+    public_paths = {"/login", "/api/auth/login", "/api/auth/session"}
+    if request.url.path.startswith("/assets/") or request.url.path in public_paths:
+        if request.method == "POST" and not _origem_permitida(request):
+            return JSONResponse({"detail": "Origem da requisição não autorizada."}, status_code=403)
+        return await call_next(request)
+
+    token = os.getenv("COLETOR_WEB_TOKEN", "")
+    if len(token) < 32:
+        if request.url.path == "/":
+            return RedirectResponse("/login?error=not-configured", status_code=303)
+        return JSONResponse(
+            {"detail": "Acesso remoto desabilitado: configure COLETOR_WEB_TOKEN com 32+ caracteres."},
+            status_code=503,
+        )
+
+    if request.method == "POST" and not _origem_permitida(request):
+        return JSONResponse({"detail": "Origem da requisição não autorizada."}, status_code=403)
+
+    if not _sessao_valida(request.cookies.get(SESSION_COOKIE), token):
+        if request.url.path == "/":
+            return RedirectResponse("/login", status_code=303)
+        return JSONResponse({"detail": "Sessão expirada ou ausente.", "login": "/login"}, status_code=401)
+    return await call_next(request)

@@ -30,7 +30,7 @@ dev = [
 include = ["coletor*"]
 
 [tool.setuptools.data-files]
-"share/coletor-artigos/web" = ["web/index.html", "web/styles.css", "web/forms.css", "web/app.js"]
+"share/coletor-artigos/web" = ["web/index.html", "web/login.html", "web/styles.css", "web/forms.css", "web/model.css", "web/login.css", "web/login.js", "web/session.css", "web/app.js"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -135,13 +135,17 @@ A interface HTTP executa a busca e, em seguida, avalia cada linha do `consolidad
 ollama pull qwen3.5:0.8b
 ```
 
-Com o serviço Ollama ativo e o `.env` preenchido, inicie o servidor local:
+Preencha `.env` com suas credenciais de APIs e um `COLETOR_WEB_TOKEN` aleatório com pelo menos 32 caracteres. Esse token protege a interface de outros computadores e será digitado na página de login (não aparece um popup do navegador). A sessão fica em cookie HttpOnly assinado, expira após 12 horas e pode ser encerrada pelo botão “Sair da sessão”. Inicie o servidor:
 
 ```bash
-python -m coletor --web
+python -m coletor --web --host 0.0.0.0
 ```
 
-Abra <http://127.0.0.1:8000>. Ao iniciar, a aplicação tenta iniciar `ollama serve` se o serviço ainda não estiver ativo e carrega o modelo padrão `qwen3.5:0.8b` para mantê-lo pronto. O modelo deve estar previamente instalado (`ollama pull qwen3.5:0.8b`); a aplicação não baixa modelos automaticamente. A tela tem uma aba lateral de nova pesquisa e outra de histórico, permite configurar parâmetros equivalentes ao YAML, editar critérios, escolher o modelo Ollama e acompanhar o andamento. O botão de salvar persiste os campos em `localStorage` do navegador. Para outra porta, use `--port 8080`. O servidor é ligado somente a `127.0.0.1`; as credenciais continuam exclusivamente no `.env` e não são exibidas na interface.
+Abra `https://<domínio-do-servidor>/` (não use `0.0.0.0` como endereço no navegador). O bind padrão agora é `0.0.0.0`; para uso apenas local, passe `--host 127.0.0.1`. **Não exponha HTTP diretamente à Internet:** use firewall e um proxy reverso com HTTPS/TLS. O cookie de sessão recebe o atributo `Secure` quando a conexão é HTTPS (o proxy deve enviar `X-Forwarded-Proto`); em HTTP simples na rede local o login funciona, mas o token trafega sem criptografia. Requisições vindas de um proxy reverso (com `X-Forwarded-For`, `X-Real-IP`, `Forwarded` ou `X-Forwarded-Host`) sempre exigem login, mesmo que o proxy esteja na mesma máquina.
+
+Ao iniciar, a aplicação tenta iniciar `ollama serve` se o serviço ainda não estiver ativo e carrega o modelo padrão `qwen3.5:0.8b`. O modelo deve estar previamente instalado (`ollama pull qwen3.5:0.8b`); a aplicação não baixa modelos automaticamente. Na parte inferior da nova pesquisa, a lista é carregada dos modelos já instalados no Ollama e permite selecionar outro. O botão atualiza a lista.
+
+A aplicação Python não força CPU nem define `num_gpu`: a inferência é executada pelo daemon Ollama, que escolhe CPU/GPU conforme o driver, build e memória disponíveis. O painel mostra a partilha informada por `ollama ps` (VRAM versus memória total do modelo). Se indicar `0% GPU`, verifique `ollama ps`, logs do Ollama, drivers e suporte do runtime à GPU no servidor. Para outra porta, use `--port 8080`. Credenciais das APIs bibliográficas continuam exclusivamente no `.env` e não são exibidas na interface.
 
 Cada execução cria uma nova pasta dentro de `./saida/`, contendo `config.yaml`, `criterios.txt` e os artefatos da coleta. Após a busca, `ranking.csv` é salvo na mesma pasta. A aba Histórico lista as pastas existentes e permite baixar os arquivos. O ranking mantém as 16 colunas do consolidado e acrescenta `llm_label` (`incluido`, `duvidoso` ou `excluido`), `llm_match` (1, 0,5 ou 0), `llm_justification`, `llm_score` e `llm_status`. O arquivo é ordenado por `llm_score` decrescente; falhas individuais ficam no fim, com `llm_status=erro`.
 
