@@ -89,3 +89,45 @@ def test_falha_de_um_artigo_nao_interrompe_o_lote(tmp_path, monkeypatch: pytest.
     assert resultados[0]["llm_status"] == "ok"
     assert resultados[1]["llm_status"] == "erro"
     assert resultados[1]["llm_score"] == ""
+
+
+def test_chat_desativa_raciocinio_e_limita_tokens(monkeypatch: pytest.MonkeyPatch) -> None:
+    chamadas = {}
+
+    class _Mensagem:
+        content = '{"justification": "Critério 1.", "quote": "x", "match": 1}'
+
+    class _Resposta:
+        message = _Mensagem()
+        done_reason = "stop"
+
+    def _falso_chat(**kwargs):
+        chamadas.update(kwargs)
+        return _Resposta()
+
+    monkeypatch.setattr(ranking.ollama, "chat", _falso_chat)
+    ranking._chat("prompt", "modelo")
+    assert chamadas["think"] is False
+    assert chamadas["options"]["num_predict"] == ranking.MAX_TOKENS_RESPOSTA
+
+
+def test_chat_rejeita_resposta_truncada(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _Mensagem:
+        content = '{"justification": "Critério 1.'
+
+    class _Resposta:
+        message = _Mensagem()
+        done_reason = "length"
+
+    monkeypatch.setattr(ranking.ollama, "chat", lambda **kwargs: _Resposta())
+    with pytest.raises(ValueError, match="limite de tokens"):
+        ranking._chat("prompt", "modelo")
+
+
+def test_screen_sem_resumo_nao_chama_o_modelo(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _nao_chamar(prompt, model):
+        raise AssertionError("o modelo não deveria ser chamado")
+
+    monkeypatch.setattr(ranking, "_chat", _nao_chamar)
+    with pytest.raises(ValueError, match="sem resumo"):
+        ranking.screen("Título", "  ", "", "Critério 1", "modelo")
