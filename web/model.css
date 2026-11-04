@@ -1,1 +1,32 @@
-.panel-icon.green{background:#e8f7f1;color:#189775}.model-panel{display:grid;grid-template-columns:minmax(210px,.7fr) minmax(0,1.3fr);align-items:center;gap:22px;margin-top:16px;padding:17px 20px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:var(--shadow)}.model-heading{display:flex;align-items:center;gap:11px}.model-heading h2{margin:0;font-size:13px;letter-spacing:-.02em}.model-heading p{margin:3px 0 0;color:#8a96a9;font-size:10px}.model-controls{display:grid;grid-template-columns:minmax(180px,1fr) auto minmax(170px,.8fr);align-items:center;gap:14px}.model-select-field{margin:0}.model-select-field select{width:100%;border:1px solid #dfe5ee;border-radius:8px;padding:9px 10px;background:#fff;color:var(--ink);font:12px/1.4 inherit}.model-select-field select:focus{outline:0;border-color:#91a7ff;box-shadow:0 0 0 3px #4168ed12}.model-select-field select:disabled{background:#f7f8fb;color:#8a96a9}.model-refresh{min-height:36px}.accelerator-chip{display:flex;align-items:center;gap:9px;min-width:0;padding:9px 11px;border:1px solid #e8edf3;border-radius:9px;background:#fafbfd}.accelerator-dot{width:8px;height:8px;flex:none;border-radius:50%;background:#aab4c3}.accelerator-dot.gpu{background:#1ca887;box-shadow:0 0 0 3px #1ca88719}.accelerator-dot.cpu{background:#e1a23b;box-shadow:0 0 0 3px #e1a23b19}.accelerator-chip strong,.accelerator-chip small{display:block}.accelerator-chip strong{font-size:10px}.accelerator-chip small{margin-top:2px;overflow:hidden;color:#8692a4;font-size:9px;text-overflow:ellipsis;white-space:nowrap}@media(max-width:1050px){.model-panel{grid-template-columns:1fr;gap:12px}.model-controls{grid-template-columns:minmax(180px,1fr) auto minmax(150px,.8fr)}}@media(max-width:700px){.model-controls{grid-template-columns:1fr 1fr}.model-select-field{grid-column:1/-1}.accelerator-chip{min-height:36px}.model-refresh{width:100%}}@media(max-width:480px){.model-controls{grid-template-columns:1fr}.model-select-field{grid-column:auto}.accelerator-chip{min-height:0}}
+/* Model selection block inside the sidebar footer (.sidebar-bottom), above "Execução no servidor". */
+.panel-icon.green{background:#e8f7f1;color:#189775}
+.sidebar{overflow-y:auto}
+.model-panel{display:grid;gap:10px;padding-bottom:13px;border-bottom:1px solid #edf0f5}
+.model-heading{display:flex;align-items:center;gap:9px;min-width:0}
+.model-heading .panel-icon{width:26px;height:26px;flex:none;border-radius:8px;font-size:15px}
+.model-title{flex:1;min-width:0}
+.model-heading h2{margin:0;font-size:11.5px;letter-spacing:-.02em}
+.model-heading p{margin:2px 0 0;color:#8a96a9;font-size:9.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.model-refresh{width:26px;height:26px;min-height:26px;padding:0;flex:none;margin-left:auto;border-radius:7px;font-size:13px;line-height:1}
+.model-controls{display:grid;grid-template-columns:1fr;gap:8px}
+.model-select-field{margin:0}
+.model-select-field label{margin-bottom:5px;font-size:10.5px}
+.model-select-field select{width:100%;border:1px solid #dfe5ee;border-radius:8px;padding:8px 9px;background:#fff;color:var(--ink);font:11px/1.4 inherit}
+.model-select-field select:focus{outline:0;border-color:#91a7ff;box-shadow:0 0 0 3px #4168ed12}
+.model-select-field select:disabled{background:#f7f8fb;color:#8a96a9}
+.model-select-field small{font-size:9.5px;line-height:1.35}
+.accelerator-chip{display:flex;align-items:center;gap:9px;min-width:0;padding:8px 10px;border:1px solid #e8edf3;border-radius:9px;background:#fafbfd}
+.accelerator-dot{width:8px;height:8px;flex:none;border-radius:50%;background:#aab4c3}
+.accelerator-dot.gpu{background:#1ca887;box-shadow:0 0 0 3px #1ca88719}
+.accelerator-dot.cpu{background:#e1a23b;box-shadow:0 0 0 3px #e1a23b19}
+.accelerator-chip>div{min-width:0}
+.accelerator-chip strong,.accelerator-chip small{display:block}
+.accelerator-chip strong{font-size:10px}
+.accelerator-chip small{margin-top:2px;overflow:hidden;color:#8692a4;font-size:9px;text-overflow:ellipsis;white-space:nowrap}
+/* Mobile: show the model selector on a second row while keeping the rest of the sidebar footer hidden. */
+@media(max-width:650px){.sidebar{flex-wrap:wrap;overflow:visible}
+.sidebar-bottom{display:block;order:3;width:100%;margin-top:8px;padding:8px 0 0;border-top:1px solid #edf0f5}
+.sidebar-bottom .local-indicator,.sidebar-bottom .ollama-small,.sidebar-bottom .logout-button{display:none}
+.model-panel{padding-bottom:0;border-bottom:0}
+.model-refresh{width:26px;padding:0;font-size:13px}
+}

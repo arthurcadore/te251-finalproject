@@ -29,3 +29,230 @@ textarea {
 .field textarea.code-field {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
 }
+
+/* Center glyphs optically inside square icon badges. */
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.panel-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.panel-icon.blue {
+  font-size: 19px;
+  padding-bottom: 2px;
+}
+
+/* Search panel header with highlighted max-per-base control separated by a vertical bar. */
+.search-heading {
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.panel-heading-main {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.max-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 16px;
+  border-left: 1.5px solid #dfe5ee;
+  flex: none;
+}
+
+.max-inline label {
+  margin: 0;
+  color: #34456a;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.max-inline input[type="number"] {
+  width: 78px;
+  padding: 6px 9px;
+  border: 1px solid #cfd8ea;
+  border-radius: 8px;
+  background: #f6f8ff;
+  color: var(--blue-dark);
+  text-align: center;
+  font: 800 13px/1.2 inherit;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.max-inline input[type="number"]:focus {
+  outline: 0;
+  border-color: #91a7ff;
+  background: #fff;
+  box-shadow: 0 0 0 3px #4168ed12;
+}
+
+@media (max-width: 650px) {
+  .search-heading {
+    flex-wrap: wrap;
+  }
+
+  .max-inline {
+    width: 100%;
+    justify-content: space-between;
+    padding: 10px 0 0;
+    border-left: 0;
+    border-top: 1px solid #edf0f5;
+  }
+}
+
+/* Two-column layout: left stack (search + ranking) matches right criteria panel height. */
+.left-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.search-panel>.field:last-child,
+.search-panel>.field-row:last-child .field {
+  margin-bottom: 0;
+}
+
+/* Override `.field label { display: block; margin-bottom: 6px }` from styles.css so each base card stays a centered flex container. */
+.field label.check-card,
+.check-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0;
+  min-height: 34px;
+  padding: 6px 10px;
+  line-height: 1;
+}
+
+.check-card input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  flex: none;
+}
+
+.check-card span {
+  display: block;
+  line-height: 1;
+}
+
+/* Align bullet icon and privacy text at the bottom of the criteria panel. */
+.privacy-note {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.privacy-note>span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.privacy-note p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.panel-icon.indigo {
+  background: #ecefff;
+  color: #516ce4;
+}
+
+.ranking-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.weights-grid {
+  display: grid;
+  gap: 13px;
+  margin-bottom: 0;
+}
+
+.weight-item {
+  display: grid;
+  gap: 6px;
+}
+
+.weight-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.weight-head label {
+  margin: 0;
+  color: #43536c;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.weight-head label small {
+  display: inline;
+  margin: 0;
+  color: #929daf;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.weight-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #43536c;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.weight-value input[type="number"] {
+  width: 50px;
+  padding: 4px 6px;
+  border: 1px solid #dfe5ee;
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+  text-align: right;
+  font: 700 11px/1.2 inherit;
+}
+
+.weight-value input[type="number"]:focus {
+  outline: 0;
+  border-color: #91a7ff;
+  box-shadow: 0 0 0 3px #4168ed12;
+}
+
+.weight-item input[type="range"] {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--blue);
+  cursor: pointer;
+}
+
+/* Tall enough to show the full criteria example (placeholder) without scrolling. */
+.criteria-field {
+  min-height: 490px;
+}
+
+.criteria-field textarea {
+  min-height: 465px;
+}

@@ -6,10 +6,10 @@ import csv
 import math
 import tempfile
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Mapping
 
 import ollama
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 DEFAULT_MODEL = "qwen3.5:0.8b"
 PESOS_SCORE = {"aderencia": 0.70, "ano": 0.15, "citacoes": 0.15}
@@ -17,6 +17,44 @@ COLUNAS_LLM = ["llm_label", "llm_match", "llm_justification", "llm_score", "llm_
 # Teto de tokens por artigo: a resposta JSON esperada tem ~200–300 tokens. Sem ele, um modelo
 # que entra em repetição gera até preencher o contexto inteiro (65k tokens, minutos por artigo).
 MAX_TOKENS_RESPOSTA = 1024
+
+
+class PesosRanking(BaseModel):
+    """Pesos de aderência, recência (ano) e citações; somam 1.0 e aderência >= 50%."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    aderencia: float = Field(0.70, ge=0.50, le=1.0)
+    ano: float = Field(0.15, ge=0.0, le=0.50)
+    citacoes: float = Field(0.15, ge=0.0, le=0.50)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _aceitar_percentual(cls, dados: object) -> object:
+        if not isinstance(dados, Mapping):
+            return dados
+        valores = {k: float(v) for k, v in dados.items() if isinstance(v, (int, float)) and not isinstance(v, bool)}
+        if len(valores) == len(dados) and any(v > 1.0 for v in valores.values()):
+            return {k: v / 100.0 for k, v in valores.items()}
+        return dados
+
+    @model_validator(mode="after")
+    def _validar_soma(self) -> PesosRanking:
+        total = self.aderencia + self.ano + self.citacoes
+        if not math.isclose(total, 1.0, abs_tol=1e-4):
+            raise ValueError(f"os pesos de ranking devem somar 100% (recebido: {round(total * 100, 2)}%)")
+        return self
+
+    def como_dict(self) -> dict[str, float]:
+        return {"aderencia": self.aderencia, "ano": self.ano, "citacoes": self.citacoes}
+
+
+def normalizar_pesos(pesos: PesosRanking | Mapping[str, float] | None = None) -> dict[str, float]:
+    if pesos is None:
+        return dict(PESOS_SCORE)
+    if isinstance(pesos, PesosRanking):
+        return pesos.como_dict()
+    return PesosRanking.model_validate(dict(pesos)).como_dict()
 
 
 class Screening(BaseModel):
@@ -68,14 +106,17 @@ def compute_score(
     year_max: float | None,
     citacoes_min: float | None,
     citacoes_max: float | None,
+    *,
+    pesos: PesosRanking | Mapping[str, float] | None = None,
 ) -> float:
     """Score 0–1 combinando aderência, recência e citações normalizadas."""
+    p = normalizar_pesos(pesos)
     recencia = _normalizar(year, year_min, year_max)
     citacoes = _normalizar(n_citacoes, citacoes_min, citacoes_max, logaritmico=True)
     return round(
-        PESOS_SCORE["aderencia"] * float(match)
-        + PESOS_SCORE["ano"] * recencia
-        + PESOS_SCORE["citacoes"] * citacoes,
+        p["aderencia"] * float(match)
+        + p["ano"] * recencia
+        + p["citacoes"] * citacoes,
         3,
     )
 
@@ -161,8 +202,10 @@ def gerar_ranking(
     modelo: str = DEFAULT_MODEL,
     output: str | Path | None = None,
     progresso: Callable[[int, int, str], None] | None = None,
+    pesos: PesosRanking | Mapping[str, float] | None = None,
 ) -> Path:
     """Valida os artigos e grava cópia ranqueada do CSV consolidado."""
+    pesos_validados = normalizar_pesos(pesos)
     entrada = Path(consolidado)
     destino = Path(output) if output is not None else entrada.with_name("ranking.csv")
     with entrada.open("r", encoding="utf-8-sig", newline="") as arquivo:
@@ -218,6 +261,7 @@ def gerar_ranking(
                     "llm_score": str(compute_score(
                         match, linha.get("ano"), linha.get("n_citacoes"),
                         ano_min, ano_max, cit_min, cit_max,
+                        pesos=pesos_validados,
                     )),
                     "llm_status": "ok",
                 })

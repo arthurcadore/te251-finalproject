@@ -7,10 +7,10 @@
   let preferredModel = "qwen3.5:0.8b";
   let modelRefreshInProgress = false;
   let selectModelsRequested = false;
+  let defaultConfig = {};
 
   const checkedValues = (id) => [...document.querySelectorAll(`#${id} input[type=checkbox]:checked`)].map((item) => item.value);
   const fillChecks = (id, values = []) => document.querySelectorAll(`#${id} input[type=checkbox]`).forEach((item) => { item.checked = values.includes(item.value); });
-  const optionalInteger = (id) => $(id).value.trim() ? Number.parseInt($(id).value, 10) : null;
 
   function notify(message, error = false) {
     let toast = $("toast");
@@ -37,66 +37,85 @@
     if (viewName === "historico") refreshHistory();
   }
 
+  const clampInt = (val, min, max, fallback) => {
+    const n = Number.parseInt(val, 10);
+    return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+  };
+
+  function renderWeights(aderencia, ano, citacoes) {
+    $("peso_aderencia").value = aderencia;
+    $("peso_aderencia_num").value = aderencia;
+    $("peso_ano").value = ano;
+    $("peso_ano_num").value = ano;
+    $("peso_citacoes").value = citacoes;
+    $("peso_citacoes_num").value = citacoes;
+
+  }
+
+  function rebalanceWeights(changed, rawValue) {
+    let a = clampInt($("peso_aderencia").value, 50, 100, 70);
+    let r = clampInt($("peso_ano").value, 0, 50, 15);
+    let c = clampInt($("peso_citacoes").value, 0, 50, 15);
+    if (changed === "aderencia") {
+      a = clampInt(rawValue, 50, 100, a);
+      const rem = 100 - a;
+      const sumRC = r + c;
+      r = sumRC > 0 ? Math.round((rem * r) / sumRC) : Math.round(rem / 2);
+      c = rem - r;
+    } else if (changed === "ano") {
+      r = clampInt(rawValue, 0, 50, r);
+      c = Math.min(100 - a - r, c);
+      if (c < 0) c = 0;
+      a = 100 - r - c;
+    } else if (changed === "citacoes") {
+      c = clampInt(rawValue, 0, 50, c);
+      r = Math.min(100 - a - c, r);
+      if (r < 0) r = 0;
+      a = 100 - r - c;
+    }
+    renderWeights(a, r, c);
+  }
+
   function populate(data) {
     const config = data.config || {};
-    const filtros = config.filtros || {};
-    const enrich = config.enriquecimento || {};
-    const output = config.saida || {};
-    const exec = config.execucao || {};
     $("query").value = config.query || "";
     fillChecks("bases", config.bases_ativas || []);
     $("max").value = config.max_artigos_por_base ?? 100;
-    $("campo").value = filtros.campo_busca || "tudo";
-    $("ano_de").value = filtros.ano_de ?? "";
-    $("ano_ate").value = filtros.ano_ate ?? "";
-    $("idiomas").value = (filtros.idiomas || []).join(", ");
-    fillChecks("tipos", filtros.tipos || []);
-    $("somente_oa").checked = Boolean(filtros.somente_oa);
-    $("referencias").checked = enrich.referencias ?? true;
-    $("resolver_ids").checked = enrich.resolver_ids_para_doi ?? true;
-    $("texto_completo").checked = enrich.texto_completo ?? true;
-    $("separador").value = output.separador_lista || " | ";
-    $("raw_json").checked = output.raw_json ?? true;
-    $("timeout").value = exec.timeout_s ?? 30;
-    $("paginas").value = exec.max_paginas_extras_filtro_local ?? 10;
-    $("log_nivel").value = exec.log_nivel || "INFO";
-    $("cache").checked = exec.cache_http ?? true;
-    $("limites").value = JSON.stringify(config.limites || {}, null, 2);
     $("criteria").value = data.criteria || "";
     preferredModel = data.model || "qwen3.5:0.8b";
+    const w = data.weights || {};
+    const toPct = (v, fb) => {
+      const n = Number(v);
+      if (!Number.isFinite(n)) return fb;
+      return Math.round(n <= 1 && (w.aderencia ?? 70) <= 1 ? n * 100 : n);
+    };
+    let a = clampInt(toPct(w.aderencia, 70), 50, 100, 70);
+    let r = clampInt(toPct(w.ano, 15), 0, 100 - a, 15);
+    let c = 100 - a - r;
+    renderWeights(a, r, c);
   }
 
   function makePayload() {
-    let limits;
-    try { limits = JSON.parse($("limites").value || "{}"); }
-    catch { throw new Error("Os limites por base precisam estar em JSON válido."); }
-    const languages = $("idiomas").value.split(",").map((value) => value.trim()).filter(Boolean);
+    // Filtros, enriquecimento, saída, execução e limites não são editáveis na interface:
+    // seguem sempre os valores padrão do servidor (/api/config).
+    const hidden = structuredClone(defaultConfig);
+    const aderencia = clampInt($("peso_aderencia").value, 50, 100, 70);
+    const ano = clampInt($("peso_ano").value, 0, 100 - aderencia, 15);
+    const citacoes = 100 - aderencia - ano;
     return {
       config: {
+        ...hidden,
         query: $("query").value.trim(),
         bases_ativas: checkedValues("bases"),
         max_artigos_por_base: Number.parseInt($("max").value, 10),
-        filtros: {
-          ano_de: optionalInteger("ano_de"), ano_ate: optionalInteger("ano_ate"),
-          tipos: checkedValues("tipos"), idiomas: languages,
-          somente_oa: $("somente_oa").checked, campo_busca: $("campo").value,
-        },
-        enriquecimento: {
-          referencias: $("referencias").checked,
-          resolver_ids_para_doi: $("resolver_ids").checked,
-          texto_completo: $("texto_completo").checked,
-        },
-        saida: { diretorio: "saida", raw_json: $("raw_json").checked, separador_lista: $("separador").value },
-        execucao: {
-          max_paginas_extras_filtro_local: Number.parseInt($("paginas").value, 10),
-          cache_http: $("cache").checked,
-          timeout_s: Number($("timeout").value),
-          log_nivel: $("log_nivel").value,
-        },
-        limites: limits,
       },
       criteria: $("criteria").value,
       model: $("model").value.trim(),
+      weights: {
+        aderencia: Number((aderencia / 100).toFixed(4)),
+        ano: Number((ano / 100).toFixed(4)),
+        citacoes: Number((citacoes / 100).toFixed(4)),
+      },
     };
   }
 
@@ -318,9 +337,16 @@
   });
   $("new-from-empty").addEventListener("click", () => setView("nova"));
   $("open-history").addEventListener("click", () => setView("historico"));
+  $("peso_aderencia").addEventListener("input", (e) => rebalanceWeights("aderencia", e.target.value));
+  $("peso_aderencia_num").addEventListener("change", (e) => rebalanceWeights("aderencia", e.target.value));
+  $("peso_ano").addEventListener("input", (e) => rebalanceWeights("ano", e.target.value));
+  $("peso_ano_num").addEventListener("change", (e) => rebalanceWeights("ano", e.target.value));
+  $("peso_citacoes").addEventListener("input", (e) => rebalanceWeights("citacoes", e.target.value));
+  $("peso_citacoes_num").addEventListener("change", (e) => rebalanceWeights("citacoes", e.target.value));
 
   fetchJson("/api/config")
     .then((defaults) => {
+      defaultConfig = defaults.config || {};
       try {
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
         if (saved?.model === "qwen2.5:7b") saved.model = "qwen3.5:0.8b";

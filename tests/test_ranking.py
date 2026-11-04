@@ -131,3 +131,23 @@ def test_screen_sem_resumo_nao_chama_o_modelo(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(ranking, "_chat", _nao_chamar)
     with pytest.raises(ValueError, match="sem resumo"):
         ranking.screen("Título", "  ", "", "Critério 1", "modelo")
+
+
+def test_score_com_pesos_dinamicos_e_minimo_de_aderencia() -> None:
+    score_padrao = ranking.compute_score(1, 2000, 1000, 2000, 2020, 0, 1000)
+    score_so_aderencia = ranking.compute_score(
+        1, 2000, 0, 2000, 2020, 0, 1000,
+        pesos={"aderencia": 1.0, "ano": 0.0, "citacoes": 0.0},
+    )
+    score_percentual = ranking.compute_score(
+        1, 2000, 1000, 2000, 2020, 0, 1000,
+        pesos={"aderencia": 50, "ano": 10, "citacoes": 40},
+    )
+    assert score_padrao == 0.85
+    assert score_so_aderencia == 1.0
+    assert score_percentual == 0.9
+
+    with pytest.raises(ValueError):
+        ranking.normalizar_pesos({"aderencia": 0.45, "ano": 0.30, "citacoes": 0.25})
+    with pytest.raises(ValueError):
+        ranking.normalizar_pesos({"aderencia": 0.70, "ano": 0.20, "citacoes": 0.20})

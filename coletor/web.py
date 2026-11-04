@@ -29,7 +29,7 @@ import yaml
 
 from . import config as config_mod
 from .orquestrador import diretorio_execucao, executar
-from .ranking import DEFAULT_MODEL, gerar_ranking
+from .ranking import DEFAULT_MODEL, PESOS_SCORE, PesosRanking, gerar_ranking, normalizar_pesos
 from .segredos import Credenciais, registrar
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -67,6 +67,7 @@ class InterfaceRequest(BaseModel):
     config: dict[str, Any]
     criteria: str = Field(min_length=1)
     model: str = Field(min_length=1, max_length=200)
+    weights: PesosRanking = Field(default_factory=PesosRanking)
 
 
 class LoginRequest(BaseModel):
@@ -268,7 +269,12 @@ def _atualizar_estado(**valores: Any) -> None:
         _job_state.update(valores)
 
 
-def _executar_job(configuracao: config_mod.Config, criteria: str, model: str) -> None:
+def _executar_job(
+    configuracao: config_mod.Config,
+    criteria: str,
+    model: str,
+    weights: PesosRanking | dict[str, float] | None = None,
+) -> None:
     _atualizar_estado(stage="carregando modelo", processed=0, total=0, current="", output="", error="")
     try:
         load_dotenv(ROOT / ".env")
@@ -296,7 +302,11 @@ def _executar_job(configuracao: config_mod.Config, criteria: str, model: str) ->
         def progresso(processado: int, total: int, titulo: str) -> None:
             _atualizar_estado(processed=processado, total=total, current=titulo)
 
-        ranking = gerar_ranking(consolidado, criteria, modelo=model, progresso=progresso)
+        pesos = normalizar_pesos(weights)
+        kwargs_ranking: dict[str, Any] = {"modelo": model, "progresso": progresso}
+        if pesos != PESOS_SCORE:
+            kwargs_ranking["pesos"] = pesos
+        ranking = gerar_ranking(consolidado, criteria, **kwargs_ranking)
         _atualizar_estado(
             running=False,
             stage="concluído",
@@ -386,7 +396,12 @@ def history_file(research_id: str, filename: str) -> FileResponse:
 
 @app.get("/api/config")
 def get_config() -> dict[str, Any]:
-    return {"config": _config_padrao(), "criteria": "", "model": DEFAULT_MODEL}
+    return {
+        "config": _config_padrao(),
+        "criteria": "",
+        "model": DEFAULT_MODEL,
+        "weights": {"aderencia": 70, "ano": 15, "citacoes": 15},
+    }
 
 
 @app.get("/api/models")
@@ -431,7 +446,7 @@ def start_run(payload: InterfaceRequest) -> dict[str, str]:
     _atualizar_estado(stage="na fila")
     worker = threading.Thread(
         target=_executar_job,
-        args=(configuracao, payload.criteria.strip(), payload.model.strip()),
+        args=(configuracao, payload.criteria.strip(), payload.model.strip(), payload.weights),
         daemon=True,
     )
     worker.start()

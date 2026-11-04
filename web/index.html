@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,6 +11,7 @@
   <link rel="stylesheet" href="/assets/model.css">
   <link rel="stylesheet" href="/assets/session.css">
 </head>
+
 <body>
   <div class="app-shell">
     <aside class="sidebar">
@@ -19,116 +21,205 @@
       </a>
       <div class="nav-caption">ESPAÇO DE TRABALHO</div>
       <nav class="side-nav" aria-label="Navegação principal">
-        <button class="nav-item active" data-view="nova"><span class="nav-icon">＋</span><span>Nova pesquisa</span></button>
-        <button class="nav-item" data-view="historico"><span class="nav-icon">◷</span><span>Histórico de pesquisas</span><span class="nav-count" id="history-count">0</span></button>
+        <button class="nav-item active" data-view="nova"><span class="nav-icon">＋</span><span>Nova
+            pesquisa</span></button>
+        <button class="nav-item" data-view="historico"><span class="nav-icon">◷</span><span>Histórico de
+            pesquisas</span><span class="nav-count" id="history-count">0</span></button>
       </nav>
       <div class="sidebar-bottom">
-        <div class="local-indicator"><span></span><div><strong>Execução no servidor</strong><small>Dados neste servidor</small></div></div>
-        <div class="ollama-small"><span class="ollama-dot" id="ollama-dot"></span><span id="ollama-label">Ollama verificando…</span></div>
+        <section class="model-panel" aria-label="Modelo de triagem">
+          <div class="model-heading">
+            <span class="panel-icon green" aria-hidden="true">◉</span>
+            <div class="model-title">
+              <h2>Modelo de triagem</h2>
+              <p>Modelos instalados no servidor Ollama.</p>
+            </div>
+            <button class="button button-soft model-refresh" id="refresh-models" type="button" title="Atualizar modelos"
+              aria-label="Atualizar modelos">↻</button>
+          </div>
+          <div class="model-controls">
+            <div class="field model-select-field"><label for="model">Modelo disponível</label><select id="model"
+                disabled>
+                <option value="">Carregando modelos Ollama…</option>
+              </select><small id="models-hint">A lista vem diretamente do Ollama.</small></div>
+            <div class="accelerator-chip"><span class="accelerator-dot"></span>
+              <div><strong>Aceleração</strong><small id="gpu-status">Ollama informa uso de CPU/GPU após carregar o
+                  modelo.</small></div>
+            </div>
+          </div>
+        </section>
+        <div class="local-indicator"><span></span>
+          <div><strong>Execução no servidor</strong><small>Dados neste servidor</small></div>
+        </div>
+        <div class="ollama-small"><span class="ollama-dot" id="ollama-dot"></span><span id="ollama-label">Ollama
+            verificando…</span></div>
         <button class="logout-button" id="logout" type="button">Sair da sessão</button>
       </div>
     </aside>
 
     <main class="main-area">
       <div class="toolbar">
-        <div class="toolbar-context"><span class="eyebrow" id="page-eyebrow">NOVA EXECUÇÃO</span><h1 id="page-title">Nova pesquisa</h1></div>
+        <div class="toolbar-context"><span class="eyebrow" id="page-eyebrow">NOVA EXECUÇÃO</span>
+          <h1 id="page-title">Nova pesquisa</h1>
+        </div>
         <div class="toolbar-actions" id="new-actions">
           <div class="run-state" aria-live="polite">
             <span class="state-dot" id="state-dot"></span>
-            <div><strong id="stage">Pronto para configurar</strong><small id="state-detail">Ollama: verificando…</small></div>
+            <div><strong id="stage">Pronto para configurar</strong><small id="state-detail">Ollama: verificando…</small>
+            </div>
           </div>
           <button class="button button-soft" id="save">Salvar configuração</button>
-          <button class="button button-primary" id="run"><span class="button-icon">▶</span> Buscar e gerar ranking</button>
+          <button class="button button-primary" id="run"><span class="button-icon">▶</span> Buscar e gerar
+            ranking</button>
         </div>
       </div>
 
       <section id="view-nova" class="view active">
         <div class="result-banner hidden" id="result-banner">
-          <div><strong id="result-title">Pesquisa concluída</strong><p id="result-message">Os arquivos desta execução estão no histórico.</p></div>
-          <button class="button button-soft button-small" id="open-history">Ver histórico <span aria-hidden="true">→</span></button>
+          <div><strong id="result-title">Pesquisa concluída</strong>
+            <p id="result-message">Os arquivos desta execução estão no histórico.</p>
+          </div>
+          <button class="button button-soft button-small" id="open-history">Ver histórico <span
+              aria-hidden="true">→</span></button>
         </div>
         <div class="progress-card hidden" id="progress-card">
-          <div class="progress-head"><strong id="progress-stage">Preparando execução</strong><span id="progress-number"></span></div>
+          <div class="progress-head"><strong id="progress-stage">Preparando execução</strong><span
+              id="progress-number"></span></div>
           <div class="progress-track"><i id="progress-fill"></i></div>
           <p id="progress-detail">Preparando serviços locais…</p>
         </div>
 
         <div class="form-grid">
-          <section class="panel search-panel">
-            <div class="panel-heading"><div class="panel-icon blue">⌕</div><div><h2>Parâmetros de busca</h2><p>Defina a consulta e os filtros das bases acadêmicas.</p></div></div>
-            <div class="field"><label for="query">Consulta de pesquisa <span class="required">*</span></label><input id="query" type="text" placeholder='Ex.: "solar sail" AND asteroid'><small>Use AND, OR e parênteses para combinar os termos.</small></div>
-            <div class="field"><span class="field-label">Bases de busca</span><div class="check-grid" id="bases">
-              <label class="check-card"><input type="checkbox" value="openalex" checked><span>OpenAlex</span></label>
-              <label class="check-card"><input type="checkbox" value="semantic_scholar" checked><span>Semantic Scholar</span></label>
-              <label class="check-card"><input type="checkbox" value="crossref" checked><span>Crossref</span></label>
-              <label class="check-card"><input type="checkbox" value="arxiv" checked><span>arXiv</span></label>
-              <label class="check-card"><input type="checkbox" value="pubmed" checked><span>PubMed</span></label>
-              <label class="check-card"><input type="checkbox" value="europepmc" checked><span>Europe PMC</span></label>
-              <label class="check-card"><input type="checkbox" value="core" checked><span>CORE</span></label>
-              <label class="check-card"><input type="checkbox" value="doaj" checked><span>DOAJ</span></label>
-            </div><small>SciELO está desabilitada no coletor.</small></div>
-            <div class="field-row">
-              <div class="field"><label for="max">Máximo por base</label><input id="max" type="number" min="1" value="100"></div>
-              <div class="field"><label for="campo">Campo de busca</label><select id="campo"><option value="tudo">Tudo</option><option value="titulo">Título</option><option value="titulo_resumo">Título e resumo</option></select></div>
-            </div>
-            <div class="field-row three">
-              <div class="field"><label for="ano_de">Ano inicial</label><input id="ano_de" type="number" placeholder="Sem limite"></div>
-              <div class="field"><label for="ano_ate">Ano final</label><input id="ano_ate" type="number" placeholder="Sem limite"></div>
-              <div class="field"><label for="idiomas">Idiomas</label><input id="idiomas" type="text" placeholder="en, pt"></div>
-            </div>
-            <div class="field"><span class="field-label">Tipos de documento</span><div class="check-row" id="tipos">
-              <label class="check-pill"><input type="checkbox" value="artigo"><span>Artigo</span></label>
-              <label class="check-pill"><input type="checkbox" value="revisao"><span>Revisão</span></label>
-              <label class="check-pill"><input type="checkbox" value="preprint"><span>Preprint</span></label>
-              <label class="check-pill"><input type="checkbox" value="conferencia"><span>Conferência</span></label>
-              <label class="check-pill"><input type="checkbox" value="livro_capitulo"><span>Capítulo</span></label>
-            </div></div>
-            <div class="option-list">
-              <label><input id="somente_oa" type="checkbox"><span>Somente acesso aberto</span></label>
-              <label><input id="referencias" type="checkbox" checked><span>Enriquecer referências e citações</span></label>
-              <label><input id="resolver_ids" type="checkbox" checked><span>Resolver IDs para DOI</span></label>
-              <label><input id="texto_completo" type="checkbox" checked><span>Obter texto completo OA</span></label>
-            </div>
-            <details class="advanced"><summary>Opções avançadas</summary>
-              <p class="advanced-note">Cada pesquisa é criada em uma nova pasta dentro de <strong>./saida/</strong>.</p>
-              <div class="field-row three">
-                <div class="field"><label for="separador">Separador de listas</label><input id="separador" type="text" value=" | "></div>
-                <div class="field"><label for="timeout">Timeout HTTP (s)</label><input id="timeout" type="number" min="1" value="30"></div>
-                <div class="field"><label for="paginas">Páginas extras locais</label><input id="paginas" type="number" min="0" value="10"></div>
+          <div class="left-stack">
+            <section class="panel search-panel">
+              <div class="panel-heading search-heading">
+                <div class="panel-heading-main">
+                  <div class="panel-icon blue">⌕</div>
+                  <div>
+                    <h2>Parâmetros de busca</h2>
+                    <p>Defina a consulta e as bases acadêmicas.</p>
+                  </div>
+                </div>
+                <div class="max-inline">
+                  <label for="max" style="font-size: 14px;">N° máximo de artigos por base</label>
+                  <input id="max" type="number" min="1" value="100">
+                </div>
               </div>
-              <div class="field-row">
-                <div class="field"><label for="log_nivel">Nível de log</label><select id="log_nivel"><option>DEBUG</option><option selected>INFO</option><option>WARNING</option><option>ERROR</option></select></div>
-                <div class="field check-inline"><label><input id="raw_json" type="checkbox" checked> Incluir raw_json</label><label><input id="cache" type="checkbox" checked> Cache HTTP</label></div>
+              <div class="field"><label for="query">Consulta de pesquisa <span class="required">*</span></label><input
+                  id="query" type="text" placeholder='Ex.: "solar sail" AND asteroid'><small>Use AND, OR e parênteses
+                  para combinar os termos.</small></div>
+              <div class="field"><span class="field-label">Bases de busca</span>
+                <div class="check-grid" id="bases">
+                  <label class="check-card"><input type="checkbox" value="openalex"
+                      checked><span>OpenAlex</span></label>
+                  <label class="check-card"><input type="checkbox" value="semantic_scholar" checked><span>Semantic
+                      Scholar</span></label>
+                  <label class="check-card"><input type="checkbox" value="crossref"
+                      checked><span>Crossref</span></label>
+                  <label class="check-card"><input type="checkbox" value="arxiv" checked><span>arXiv</span></label>
+                  <label class="check-card"><input type="checkbox" value="pubmed" checked><span>PubMed</span></label>
+                  <label class="check-card"><input type="checkbox" value="europepmc" checked><span>Europe
+                      PMC</span></label>
+                  <label class="check-card"><input type="checkbox" value="core" checked><span>CORE</span></label>
+                  <label class="check-card"><input type="checkbox" value="doaj" checked><span>DOAJ</span></label>
+                </div><small>SciELO está desabilitada no coletor.</small>
               </div>
-              <div class="field"><label for="limites">Limites por base (JSON)</label><textarea id="limites" class="code-field" placeholder='{"arxiv":{"taxa_rps":0.33,"concorrencia":1}}'></textarea></div>
-            </details>
-          </section>
+            </section>
+            <section class="panel ranking-panel">
+              <div class="panel-heading">
+                <div class="panel-icon indigo">↗</div>
+                <div>
+                  <h2>Como funciona o ranking</h2>
+                  <p>Score final de 0 a 1 combinando as três dimensões normalizadas. Dados ausentes recebem valor neutro
+                    0,5.</p>
+                </div>
+              </div>
+              <div class="weights-grid">
+                <div class="weight-item">
+                  <div class="weight-head">
+                    <label for="peso_aderencia">Aderência aos critérios <small>(mín. 50%)</small></label>
+                    <div class="weight-value"><input id="peso_aderencia_num" type="number" min="50" max="100" step="1"
+                        value="70" aria-label="Peso da aderência em porcentagem"><span>%</span></div>
+                  </div>
+                  <input id="peso_aderencia" type="range" min="50" max="100" step="1" value="70">
+                </div>
+                <div class="weight-item">
+                  <div class="weight-head">
+                    <label for="peso_ano">Recência (ano de publicação)</label>
+                    <div class="weight-value"><input id="peso_ano_num" type="number" min="0" max="50" step="1"
+                        value="15" aria-label="Peso da recência em porcentagem"><span>%</span></div>
+                  </div>
+                  <input id="peso_ano" type="range" min="0" max="50" step="1" value="15">
+                </div>
+                <div class="weight-item">
+                  <div class="weight-head">
+                    <label for="peso_citacoes">Citações <small>(escala logarítmica)</small></label>
+                    <div class="weight-value"><input id="peso_citacoes_num" type="number" min="0" max="50" step="1"
+                        value="15" aria-label="Peso das citações em porcentagem"><span>%</span></div>
+                  </div>
+                  <input id="peso_citacoes" type="range" min="0" max="50" step="1" value="15">
+                </div>
+              </div>
+            </section>
+          </div>
 
           <section class="panel criteria-panel">
-            <div class="panel-heading"><div class="panel-icon violet">✳</div><div><h2>Critérios de triagem</h2><p>Oriente o modelo para classificar os artigos.</p></div></div>
-            <div class="field criteria-field"><label for="criteria">Critérios para o modelo <span class="required">*</span></label><textarea id="criteria" placeholder="Descreva os critérios de inclusão, exclusão e como tratar casos duvidosos…"></textarea><small>Estes critérios serão salvos em criterios.txt dentro da pasta desta pesquisa.</small></div>
-            <div class="score-card"><span class="score-symbol">↗</span><div><strong>Como funciona o ranking</strong><p>70% aderência · 15% recência · 15% citações (logarítmico). Dados ausentes recebem valor neutro 0,5.</p></div></div>
-            <div class="privacy-note"><span>⌑</span><p>A triagem roda localmente. A justificativa do modelo precisa citar literalmente o resumo; o sistema valida essa evidência.</p></div>
+            <div class="panel-heading">
+              <div class="panel-icon violet">✳</div>
+              <div>
+                <h2>Critérios de triagem</h2>
+                <p>Oriente o modelo para classificar os artigos.</p>
+              </div>
+            </div>
+            <div class="field criteria-field"><label for="criteria">Critérios para o modelo <span
+                  class="required">*</span></label><textarea id="criteria" rows="22"
+                placeholder="Descreva os critérios de inclusão, exclusão e como tratar casos duvidosos.
+Ex.: 
+SCREENING CRITERIA
+Topic: Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+
+Review question:
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse at ipsum blandit ante laoreet venenatis. Fusce interdum tempus vehicula. Duis efficitur gravida sem non dictum.
+
+1.INCLUDE (label = 1) if the paper:
+1.1. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse at ipsum blandit ante laoreet venenatis.
+1.2. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse at ipsum blandit ante laoreet venenatis.
+
+2.EXCLUDE (label = 0) if the paper:
+2.1. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse at ipsum blandit ante laoreet venenatis.
+2.2. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse at ipsum blandit ante laoreet venenatis.
+
+3.DOUBTFUL CASES:
+3.1. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse at ipsum blandit ante laoreet venenatis.
+3.2. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse at ipsum blandit ante laoreet venenatis."></textarea><small>Estes critérios serão salvos em criterios.txt dentro
+                da pasta desta pesquisa.</small></div>
+            <div class="privacy-note"><span>●</span>
+              <p>A triagem roda localmente. A justificativa do modelo precisa citar literalmente o resumo; o sistema
+                valida essa evidência.</p>
+            </div>
           </section>
         </div>
-        <section class="model-panel">
-          <div class="model-heading"><div class="panel-icon green">◉</div><div><h2>Modelo de triagem</h2><p>Selecione um modelo já instalado no servidor Ollama.</p></div></div>
-          <div class="model-controls">
-            <div class="field model-select-field"><label for="model">Modelo disponível</label><select id="model" disabled><option value="">Carregando modelos Ollama…</option></select><small id="models-hint">A lista vem diretamente do Ollama.</small></div>
-            <button class="button button-soft model-refresh" id="refresh-models" type="button">↻ Atualizar modelos</button>
-            <div class="accelerator-chip"><span class="accelerator-dot"></span><div><strong>Aceleração</strong><small id="gpu-status">Ollama informa uso de CPU/GPU após carregar o modelo.</small></div></div>
-          </div>
-        </section>
       </section>
 
       <section id="view-historico" class="view">
-        <div class="history-intro"><div><h2>Pesquisas anteriores</h2><p>Execuções e arquivos encontrados dentro de <strong>./saida/</strong>.</p></div><button class="button button-soft" id="refresh-history">↻ Atualizar</button></div>
+        <div class="history-intro">
+          <div>
+            <h2>Pesquisas anteriores</h2>
+            <p>Execuções e arquivos encontrados dentro de <strong>./saida/</strong>.</p>
+          </div><button class="button button-soft" id="refresh-history">↻ Atualizar</button>
+        </div>
         <div id="history-list" class="history-list"></div>
-        <div id="history-empty" class="empty-state hidden"><div class="empty-icon">▤</div><strong>Nenhuma pesquisa encontrada</strong><p>Quando você executar uma busca, os arquivos dela aparecerão aqui.</p><button class="button button-primary" id="new-from-empty">Iniciar nova pesquisa</button></div>
+        <div id="history-empty" class="empty-state hidden">
+          <div class="empty-icon">▤</div><strong>Nenhuma pesquisa encontrada</strong>
+          <p>Quando você executar uma busca, os arquivos dela aparecerão aqui.</p><button class="button button-primary"
+            id="new-from-empty">Iniciar nova pesquisa</button>
+        </div>
       </section>
-      <footer class="page-footer"><span>Coletor multibase de artigos científicos</span><span>Acesso remoto autenticado · Credenciais lidas de .env</span></footer>
+      <footer class="page-footer"><span>Coletor multibase de artigos científicos</span><span>Acesso remoto autenticado ·
+          Credenciais lidas de .env</span></footer>
     </main>
   </div>
   <script src="/assets/app.js" defer></script>
 </body>
+
 </html>
