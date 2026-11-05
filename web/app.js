@@ -90,10 +90,10 @@
     if (isNew) {
       activeResearchId = null;
       $("page-eyebrow").textContent = "NOVA EXECUÇÃO";
-      $("page-title").textContent = "Nova pesquisa";
+      $("page-title").textContent = "Nova Pesquisa";
     } else {
       const kw = options.keywords || "Pesquisa";
-      $("page-eyebrow").textContent = `ARQUIVOS E RESULTADOS - '${kw}'`;
+      $("page-eyebrow").textContent = `ARQUIVOS E RESULTADOS`;
       $("page-title").textContent = kw;
     }
     highlightActiveHistoryItem();
@@ -270,12 +270,12 @@
     // High-sensitivity multi-stop scale across every 0.1 step (1.0 -> 0.9 -> 0.8 -> 0.7 -> ... -> 0.0)
     const stops = [
       [0.0, 355, 78, 36], // 0.0: deep crimson
-      [0.2,   4, 78, 43], // 0.2: red
-      [0.4,  18, 82, 45], // 0.4: red-orange
-      [0.5,  28, 86, 45], // 0.5: orange
-      [0.6,  38, 88, 44], // 0.6: amber
-      [0.7,  48, 88, 42], // 0.7: golden yellow
-      [0.8,  72, 76, 39], // 0.8: yellow-lime
+      [0.2, 4, 78, 43], // 0.2: red
+      [0.4, 18, 82, 45], // 0.4: red-orange
+      [0.5, 28, 86, 45], // 0.5: orange
+      [0.6, 38, 88, 44], // 0.6: amber
+      [0.7, 48, 88, 42], // 0.7: golden yellow
+      [0.8, 72, 76, 39], // 0.8: yellow-lime
       [0.9, 108, 68, 38], // 0.9: fresh green
       [1.0, 152, 82, 32], // 1.0: deep emerald
     ];
@@ -454,7 +454,17 @@
     abstract.textContent = article.resumo || "Resumo não disponível.";
     infoCell.append(title, authors, abstract);
 
-    // 5. doi
+    // 5. llm_justification — também clicável para expandir
+    const justCell = document.createElement("div");
+    justCell.className = "article-justification";
+    justCell.title = "Clique para expandir ou recolher a justificativa completa";
+    const justText = document.createElement("p");
+    justText.className = "article-justification-text";
+    justText.textContent = article.llm_justification || "—";
+    justCell.append(justText);
+    justCell.addEventListener("click", toggleExpand);
+
+    // 6. doi
     const doiCell = document.createElement("div");
     doiCell.className = "article-doi";
     const rawDoi = String(article.doi || "").trim();
@@ -471,7 +481,7 @@
       doiCell.textContent = "—";
     }
 
-    row.append(scoreCell, yearCell, basesCell, infoCell, doiCell);
+    row.append(scoreCell, yearCell, basesCell, infoCell, justCell, doiCell);
     return row;
   }
 
@@ -579,7 +589,7 @@
     if (status.ollama_status === "pronto") {
       dot.classList.add("ready");
       label.textContent = `Modelo pronto · ${status.ollama_model}`;
-      secondary.textContent = `Ollama pronto · ${status.ollama_model}`;
+      secondary.textContent = `Ollama Pronto · ${status.ollama_model}`;
     } else if (status.ollama_status === "erro") {
       dot.classList.add("error");
       label.textContent = "Ollama indisponível";
@@ -626,7 +636,7 @@
     }
     $("progress-detail").textContent = status.total
       ? `Triagem de artigos${status.current ? ` · ${status.current}` : ""}`
-      : status.running ? status.stage === "buscando artigos" ? "Consultando as bases acadêmicas em paralelo…" : status.stage === "carregando modelo" ? "O serviço Ollama está sendo preparado…" : "Preparando execução…"
+      : status.running ? status.stage === "Buscando Artigos" ? "Consultando as bases acadêmicas em paralelo …" : status.stage === "carregando modelo" ? "O serviço Ollama está sendo preparado…" : "Preparando execução…"
         : status.error || status.output || status.ollama_error || "";
 
     if (status.stage !== lastRunStage && status.stage === "concluído") {

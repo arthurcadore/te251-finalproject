@@ -677,13 +677,17 @@ body {
 }
 
 .progress-track.indeterminate i {
-    width: 32%;
-    animation: slide 1.6s ease-in-out infinite alternate
+    width: 24%;
+    animation: slide 1.5s ease-in-out infinite alternate
 }
 
 @keyframes slide {
+    from {
+        transform: translateX(-80%)
+    }
+
     to {
-        transform: translateX(212.5%)
+        transform: translateX(396%)
     }
 }
 

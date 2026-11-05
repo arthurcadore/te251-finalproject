@@ -6,10 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f4f7fc">
   <title>Coletor de artigos científicos</title>
-  <link rel="stylesheet" href="/assets/styles.css?v=5">
-  <link rel="stylesheet" href="/assets/forms.css?v=5">
-  <link rel="stylesheet" href="/assets/model.css?v=5">
-  <link rel="stylesheet" href="/assets/session.css?v=5">
+  <link rel="stylesheet" href="/assets/styles.css?v=7">
+  <link rel="stylesheet" href="/assets/forms.css?v=7">
+  <link rel="stylesheet" href="/assets/model.css?v=7">
+  <link rel="stylesheet" href="/assets/session.css?v=7">
 </head>
 
 <body>
@@ -17,33 +17,36 @@
     <aside class="sidebar">
       <a class="brand" href="#nova" aria-label="Coletor, nova pesquisa">
         <span class="brand-mark">C</span>
-        <span><strong>Coletor</strong><small>Pesquisa acadêmica</small></span>
+        <span><strong>Coletor</strong><small>Pesquisa Acadêmica</small></span>
       </a>
       <div class="nav-caption">ESPAÇO DE TRABALHO</div>
       <nav class="side-nav" aria-label="Navegação principal">
-        <button class="nav-item active" data-view="nova"><span class="nav-icon">＋</span><span>Nova pesquisa</span></button>
+        <button class="nav-item active" data-view="nova"><span class="nav-icon">＋</span><span>Nova
+            Pesquisa</span></button>
       </nav>
       <div class="sidebar-history">
         <div class="sidebar-history-head">
           <span class="nav-caption">HISTÓRICO DE PESQUISAS</span>
           <span class="nav-count" id="history-count">0</span>
-          <button class="button button-soft sidebar-history-refresh" id="refresh-history" type="button" title="Atualizar histórico" aria-label="Atualizar histórico">↻</button>
+          <button class="button button-soft sidebar-history-refresh" id="refresh-history" type="button"
+            title="Atualizar histórico" aria-label="Atualizar histórico">↻</button>
         </div>
         <div id="history-list" class="sidebar-history-list" role="list"></div>
         <div id="history-empty" class="sidebar-history-empty hidden">Nenhuma pesquisa realizada.</div>
-      </div>      <div class="sidebar-bottom">
+      </div>
+      <div class="sidebar-bottom">
         <section class="model-panel" aria-label="Modelo de triagem">
           <div class="model-heading">
             <span class="panel-icon green" aria-hidden="true">◉</span>
             <div class="model-title">
-              <h2>Modelo de triagem</h2>
+              <h2>Modelo de Triagem</h2>
               <p>Modelos Ollama instalados.</p>
             </div>
             <button class="button button-soft model-refresh" id="refresh-models" type="button" title="Atualizar modelos"
               aria-label="Atualizar modelos">↻</button>
           </div>
           <div class="model-controls">
-            <div class="field model-select-field"><label for="model">Modelo disponível</label><select id="model"
+            <div class="field model-select-field"><label for="model">Modelo Disponível</label><select id="model"
                 disabled>
                 <option value="">Carregando modelos Ollama…</option>
               </select><small id="models-hint">A lista vem diretamente do Ollama.</small></div>
@@ -54,7 +57,7 @@
           </div>
         </section>
         <div class="local-indicator"><span></span>
-          <div><strong>Execução no servidor</strong><small>Dados neste servidor</small></div>
+          <div><strong>Execução no Servidor</strong><small>Dados neste servidor</small></div>
         </div>
         <div class="ollama-small"><span class="ollama-dot" id="ollama-dot"></span><span id="ollama-label">Ollama
             verificando…</span></div>
@@ -65,7 +68,7 @@
     <main class="main-area">
       <div class="toolbar">
         <div class="toolbar-context"><span class="eyebrow" id="page-eyebrow">NOVA EXECUÇÃO</span>
-          <h1 id="page-title">Nova pesquisa</h1>
+          <h1 id="page-title">Nova Pesquisa</h1>
         </div>
         <div class="toolbar-actions" id="new-actions">
           <div class="run-state" aria-live="polite">
@@ -73,9 +76,9 @@
             <div><strong id="stage">Pronto para configurar</strong><small id="state-detail">Ollama: verificando…</small>
             </div>
           </div>
-          <button class="button button-soft" id="save">Salvar configuração</button>
+          <button class="button button-soft" id="save">Salvar Configuração</button>
           <button class="button button-primary" id="run"><span class="button-icon">▶</span> Buscar e gerar
-            ranking</button>
+            Ranking</button>
         </div>
       </div>
 
@@ -84,7 +87,7 @@
           <div><strong id="result-title">Pesquisa concluída</strong>
             <p id="result-message">Os arquivos desta execução estão no histórico.</p>
           </div>
-          <button class="button button-soft button-small" id="open-history">Ver histórico <span
+          <button class="button button-soft button-small" id="open-history">Ver Resultado <span
               aria-hidden="true">→</span></button>
         </div>
         <div class="progress-card hidden" id="progress-card">
@@ -101,19 +104,19 @@
                 <div class="panel-heading-main">
                   <div class="panel-icon blue">⌕</div>
                   <div>
-                    <h2>Parâmetros de busca</h2>
+                    <h2>Parâmetros de Busca</h2>
                     <p>Defina a consulta e as bases acadêmicas.</p>
                   </div>
                 </div>
                 <div class="max-inline">
-                  <label for="max" style="font-size: 14px;">N° máximo de artigos por base</label>
+                  <label for="max" style="font-size: 14px;">N° máximo de artigos por base:</label>
                   <input id="max" type="number" min="1" value="100">
                 </div>
               </div>
-              <div class="field"><label for="query">Consulta de pesquisa <span class="required">*</span></label><input
-                  id="query" type="text" placeholder='Ex.: "solar sail" AND asteroid'><small>Use AND, OR e parênteses
+              <div class="field"><label for="query">Consulta: <span class="required">*</span></label><input id="query"
+                  type="text" placeholder='Ex.: "solar sail" AND asteroid'><small>Use AND, OR e parênteses
                   para combinar os termos.</small></div>
-              <div class="field"><span class="field-label">Bases de busca</span>
+              <div class="field"><span class="field-label">Bases de busca:</span>
                 <div class="check-grid" id="bases">
                   <label class="check-card"><input type="checkbox" value="openalex"
                       checked><span>OpenAlex</span></label>
@@ -134,7 +137,7 @@
               <div class="panel-heading">
                 <div class="panel-icon indigo">↗</div>
                 <div>
-                  <h2>Como funciona o ranking</h2>
+                  <h2>Como funciona o Ranking</h2>
                   <p>Score final de 0 a 1 combinando as três dimensões normalizadas. Dados ausentes recebem valor neutro
                     0,5.</p>
                 </div>
@@ -172,11 +175,11 @@
             <div class="panel-heading">
               <div class="panel-icon violet">✳</div>
               <div>
-                <h2>Critérios de triagem</h2>
+                <h2>Critérios de Triagem</h2>
                 <p>Oriente o modelo para classificar os artigos.</p>
               </div>
             </div>
-            <div class="field criteria-field"><label for="criteria">Critérios para o modelo <span
+            <div class="field criteria-field"><label for="criteria">Critérios para o modelo: <span
                   class="required">*</span></label><textarea id="criteria" rows="22"
                 placeholder="Descreva os critérios de inclusão, exclusão e como tratar casos duvidosos.
 Ex.: 
@@ -213,13 +216,14 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse at ipsum bl
               <div class="panel-heading compact-heading">
                 <div class="panel-icon blue">◔</div>
                 <div>
-                  <h2>Artigos encontrados por base</h2>
+                  <h2>Artigos encontrados por base: </h2>
                   <p id="pie-subtitle">Distribuição entre as bases acadêmicas consultadas.</p>
                 </div>
               </div>
               <div class="pie-layout">
                 <div class="pie-chart-wrap">
-                  <svg id="pie-svg" class="pie-svg" viewBox="0 0 200 200" aria-label="Gráfico de pizza de artigos por base"></svg>
+                  <svg id="pie-svg" class="pie-svg" viewBox="0 0 200 200"
+                    aria-label="Gráfico de pizza de artigos por base"></svg>
                   <div class="pie-center">
                     <strong id="pie-total">0</strong>
                     <small>coletados</small>
@@ -233,7 +237,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse at ipsum bl
               <div class="panel-heading compact-heading">
                 <div class="panel-icon indigo">▤</div>
                 <div>
-                  <h2>Arquivos da pesquisa</h2>
+                  <h2>Arquivos da pesquisa: </h2>
                   <p id="files-subtitle">Gerados em ./saida/ para download direto.</p>
                 </div>
               </div>
@@ -245,8 +249,8 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse at ipsum bl
             <div class="panel-heading compact-heading">
               <div class="panel-icon violet">★</div>
               <div>
-                <h2>Principais artigos por aderência (llm_score)</h2>
-                <p id="articles-subtitle">Ordenados do maior para o menor score. Clique em um artigo para expandir o resumo.</p>
+                <h2>Principais artigos por aderência:</h2>
+                <p id="articles-subtitle">Ordenados do maior para o menor score. Clique em um artigo para expandir.</p>
               </div>
             </div>
             <div class="articles-table-wrap" id="articles-table-wrap">
@@ -255,17 +259,19 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse at ipsum bl
                 <span>Ano</span>
                 <span>Bases</span>
                 <span>Artigo (título, autores e resumo)</span>
+                <span>Justificativa</span>
                 <span>DOI</span>
               </div>
               <div class="articles-body" id="articles-body"></div>
             </div>
           </section>
         </div>
-      </section>      <footer class="page-footer"><span>Coletor multibase de artigos científicos</span><span>Acesso remoto autenticado ·
+      </section>
+      <footer class="page-footer"><span>Coletor multibase de artigos científicos</span><span>Acesso remoto autenticado ·
           Credenciais lidas de .env</span></footer>
     </main>
   </div>
-  <script src="/assets/app.js?v=5" defer></script>
+  <script src="/assets/app.js?v=7" defer></script>
 </body>
 
 </html>

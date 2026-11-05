@@ -258,7 +258,7 @@ textarea {
 }
 
 
-/* Fix indeterminate progress bar so the 32% segment travels from 0% to 100% of the track. */
+/* Fix indeterminate progress bar so the sliding segment traverses the entire track from end to end. */
 .progress-track {
   position: relative;
 }
@@ -268,17 +268,19 @@ textarea {
   top: 0;
   bottom: 0;
   left: 0;
-  width: 32% !important;
+  width: 24% !important;
   animation: slide-full 1.5s ease-in-out infinite alternate;
 }
 
 @keyframes slide-full {
   from {
     left: 0%;
+    transform: translateX(-80%);
   }
 
   to {
-    left: 68%;
+    left: 100%;
+    transform: translateX(-20%);
   }
 }
 
@@ -566,7 +568,7 @@ textarea {
 .articles-header,
 .article-row {
   display: grid;
-  grid-template-columns: 64px 52px 115px minmax(0, 1fr) 170px;
+  grid-template-columns: 64px 48px 105px minmax(0, 1.35fr) minmax(0, 1fr) 150px;
   align-items: center;
   gap: 12px;
 }
@@ -579,6 +581,13 @@ textarea {
   font-weight: 750;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  text-align: center;
+  justify-items: center;
+}
+
+.articles-header span {
+  width: 100%;
+  text-align: center;
 }
 
 .articles-body {
@@ -591,6 +600,7 @@ textarea {
 }
 
 .article-row {
+  flex: none;
   padding: 9px 10px;
   border: 1px solid #ebeff6;
   border-radius: 10px;
@@ -624,6 +634,8 @@ textarea {
   font-size: 11.5px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  text-align: center;
+  justify-items: center;
 }
 
 .article-bases {
@@ -709,11 +721,36 @@ textarea {
   overflow: visible;
 }
 
-.article-row.expanded .article-abstract {
+.article-row.expanded .article-abstract,
+.article-row.expanded .article-justification-text {
   display: block;
   -webkit-line-clamp: unset;
   overflow: visible;
   white-space: pre-line;
+}
+
+.article-justification {
+  min-width: 0;
+  padding: 3px 6px;
+  margin: -3px -6px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.article-justification:hover {
+  background: #f3f6fc;
+}
+
+.article-justification-text {
+  margin: 0;
+  color: #5b6c86;
+  font-size: 10px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .article-doi {
@@ -748,7 +785,7 @@ textarea {
 
   .articles-header,
   .article-row {
-    grid-template-columns: 56px 44px 90px minmax(0, 1fr) 120px;
+    grid-template-columns: 56px 44px 86px minmax(0, 1.2fr) minmax(0, 1fr) 110px;
     gap: 8px;
   }
 }

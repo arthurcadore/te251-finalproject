@@ -289,7 +289,7 @@ def _executar_job(
         (pasta_saida / "criterios.txt").write_text(criteria.rstrip() + "\n", encoding="utf-8")
         _carregar_modelo(model)
         _atualizar_estado(ollama_status="pronto", ollama_model=model, ollama_error="")
-        _atualizar_estado(stage="buscando artigos")
+        _atualizar_estado(stage="Buscando Artigos")
         credenciais = Credenciais.do_ambiente()
         registrar(credenciais)
         codigo, pasta_saida = asyncio.run(executar(configuracao, credenciais, dir_saida_override=pasta_saida))
@@ -300,7 +300,7 @@ def _executar_job(
         if not consolidado.exists():
             raise FileNotFoundError("A busca não produziu consolidado.csv.")
 
-        _atualizar_estado(stage="validando e ranqueando", processed=0, total=0)
+        _atualizar_estado(stage="Validando e Ranqueando", processed=0, total=0)
 
         def progresso(processado: int, total: int, titulo: str) -> None:
             _atualizar_estado(processed=processado, total=total, current=titulo)
@@ -443,6 +443,7 @@ def _ler_artigos_ordenados(pasta: Path) -> list[dict[str, Any]]:
                 "resumo": str(linha.get("resumo") or "").strip(),
                 "doi": str(linha.get("doi") or "").strip(),
                 "llm_label": str(linha.get("llm_label") or "").strip(),
+                "llm_justification": str(linha.get("llm_justification") or "").strip(),
             })
         artigos.sort(key=lambda item: (item["llm_score"] is None, -(item["llm_score"] or 0.0)))
         return artigos
