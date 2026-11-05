@@ -54,7 +54,7 @@ async def test_history_lists_files_and_rejects_path_traversal(tmp_path: Path, mo
         arquivo = await client.get(f"/api/history/{pesquisa.name}/ranking.csv")
         traversal = await client.get("/api/history/../README.md")
 
-    assert historico.json() == [{"id": pesquisa.name, "files": ["ranking.csv"]}]
+    assert historico.json() == [{"id": pesquisa.name, "query": "busca teste", "files": ["ranking.csv"]}]
     assert arquivo.status_code == 200 and "llm_score" in arquivo.text
     assert traversal.status_code in {404, 422}
 

@@ -1,13 +1,42 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const STORAGE_KEY = "coletor-artigos-form";
-  const views = { nova: $("view-nova"), historico: $("view-historico") };
+  const views = {
+    nova: $("view-nova"),
+    historico: $("view-historico"),
+  };
+  const BASE_NAMES = {
+    openalex: "OpenAlex",
+    semantic_scholar: "Semantic Scholar",
+    crossref: "Crossref",
+    arxiv: "arXiv",
+    pubmed: "PubMed",
+    europepmc: "Europe PMC",
+    core: "CORE",
+    doaj: "DOAJ",
+    scielo: "SciELO",
+  };
+  const PIE_COLORS = [
+    "#4168ed",
+    "#18a383",
+    "#8064e8",
+    "#e6992e",
+    "#e05c6c",
+    "#2898bd",
+    "#6c8893",
+    "#9c5de0",
+  ];
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
   let lastRunStage = "ocioso";
   let toastTimer;
   let preferredModel = "qwen3.5:0.8b";
   let modelRefreshInProgress = false;
   let selectModelsRequested = false;
   let defaultConfig = {};
+  let activeResearchId = null;
+  let currentResearchData = null;
+  let historyItems = [];
 
   const checkedValues = (id) => [...document.querySelectorAll(`#${id} input[type=checkbox]:checked`)].map((item) => item.value);
   const fillChecks = (id, values = []) => document.querySelectorAll(`#${id} input[type=checkbox]`).forEach((item) => { item.checked = values.includes(item.value); });
@@ -27,14 +56,47 @@
     toastTimer = setTimeout(() => toast.remove(), 3300);
   }
 
-  function setView(viewName) {
-    Object.entries(views).forEach(([name, element]) => element.classList.toggle("active", name === viewName));
-    document.querySelectorAll(".nav-item").forEach((button) => button.classList.toggle("active", button.dataset.view === viewName));
+  function cleanKeywords(raw, fallbackId = "") {
+    let trimmed = String(raw || "").trim();
+    if (trimmed.length >= 2 && trimmed.startsWith("'") && trimmed.endsWith("'")) {
+      trimmed = trimmed.slice(1, -1).trim();
+    }
+    if (trimmed) return trimmed;
+    const parts = String(fallbackId || "").split("_", 3);
+    return parts.length === 3 ? parts[2].replace(/-/g, " ") : String(fallbackId || "Pesquisa");
+  }
+
+  function formatTimestampId(researchId) {
+    const match = /^(\d{4})-(\d{2})-(\d{2})_(\d{2})(\d{2})(\d{2})/.exec(String(researchId || ""));
+    if (!match) return researchId;
+    return `${match[3]}/${match[2]}/${match[1]} · ${match[4]}:${match[5]}`;
+  }
+
+  function highlightActiveHistoryItem() {
+    document.querySelectorAll(".chat-history-item").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.id === activeResearchId);
+    });
+  }
+
+  function setView(viewName, options = {}) {
+    Object.entries(views).forEach(([name, element]) => {
+      if (element) element.classList.toggle("active", name === viewName);
+    });
+    document.querySelectorAll(".nav-item").forEach((button) => {
+      button.classList.toggle("active", button.dataset.view === viewName);
+    });
     const isNew = viewName === "nova";
     $("new-actions").classList.toggle("hidden", !isNew);
-    $("page-title").textContent = isNew ? "Nova pesquisa" : "Histórico de pesquisas";
-    $("page-eyebrow").textContent = isNew ? "NOVA EXECUÇÃO" : "ARQUIVOS E RESULTADOS";
-    if (viewName === "historico") refreshHistory();
+    if (isNew) {
+      activeResearchId = null;
+      $("page-eyebrow").textContent = "NOVA EXECUÇÃO";
+      $("page-title").textContent = "Nova pesquisa";
+    } else {
+      const kw = options.keywords || "Pesquisa";
+      $("page-eyebrow").textContent = `ARQUIVOS E RESULTADOS - '${kw}'`;
+      $("page-title").textContent = kw;
+    }
+    highlightActiveHistoryItem();
   }
 
   const clampInt = (val, min, max, fallback) => {
@@ -49,7 +111,6 @@
     $("peso_ano_num").value = ano;
     $("peso_citacoes").value = citacoes;
     $("peso_citacoes_num").value = citacoes;
-
   }
 
   function rebalanceWeights(changed, rawValue) {
@@ -89,9 +150,9 @@
       if (!Number.isFinite(n)) return fb;
       return Math.round(n <= 1 && (w.aderencia ?? 70) <= 1 ? n * 100 : n);
     };
-    let a = clampInt(toPct(w.aderencia, 70), 50, 100, 70);
-    let r = clampInt(toPct(w.ano, 15), 0, 100 - a, 15);
-    let c = 100 - a - r;
+    const a = clampInt(toPct(w.aderencia, 70), 50, 100, 70);
+    const r = clampInt(toPct(w.ano, 15), 0, 100 - a, 15);
+    const c = 100 - a - r;
     renderWeights(a, r, c);
   }
 
@@ -184,53 +245,321 @@
     return ({ csv: "CSV", yaml: "YML", txt: "TXT", md: "MD", json: "{}", log: "LOG" })[ext] || "FILE";
   }
 
-  function renderHistory(items) {
-    const root = $("history-list");
-    root.replaceChildren();
-    $("history-count").textContent = String(items.length);
-    $("history-empty").classList.toggle("hidden", items.length > 0);
-    if (!items.length) return;
+  function renderFileLinks(container, researchId, files) {
+    container.replaceChildren();
+    for (const filename of files || []) {
+      const link = document.createElement("a");
+      link.className = "file-link";
+      link.href = `/api/history/${encodeURIComponent(researchId)}/${encodeURIComponent(filename)}`;
+      link.download = filename;
+      const icon = document.createElement("span");
+      icon.className = "file-type";
+      icon.textContent = fileIcon(filename);
+      const label = document.createElement("span");
+      label.textContent = filename;
+      link.append(icon, label);
+      container.append(link);
+    }
+  }
+
+  function scoreBadgeColors(score) {
+    if (score === null || score === undefined || !Number.isFinite(Number(score))) {
+      return { bg: "#94a3b8", border: "#7e8ea4", fg: "#ffffff" };
+    }
+    const s = Math.max(0, Math.min(1, Number(score)));
+    // High-sensitivity multi-stop scale across every 0.1 step (1.0 -> 0.9 -> 0.8 -> 0.7 -> ... -> 0.0)
+    const stops = [
+      [0.0, 355, 78, 36], // 0.0: deep crimson
+      [0.2,   4, 78, 43], // 0.2: red
+      [0.4,  18, 82, 45], // 0.4: red-orange
+      [0.5,  28, 86, 45], // 0.5: orange
+      [0.6,  38, 88, 44], // 0.6: amber
+      [0.7,  48, 88, 42], // 0.7: golden yellow
+      [0.8,  72, 76, 39], // 0.8: yellow-lime
+      [0.9, 108, 68, 38], // 0.9: fresh green
+      [1.0, 152, 82, 32], // 1.0: deep emerald
+    ];
+    let lower = stops[0];
+    let upper = stops[stops.length - 1];
+    for (let i = 0; i < stops.length - 1; i += 1) {
+      if (s >= stops[i][0] && s <= stops[i + 1][0]) {
+        lower = stops[i];
+        upper = stops[i + 1];
+        break;
+      }
+    }
+    const span = upper[0] - lower[0];
+    const t = span > 0 ? (s - lower[0]) / span : 0;
+    const hue = Math.round(lower[1] + (upper[1] - lower[1]) * t);
+    const sat = Math.round(lower[2] + (upper[2] - lower[2]) * t);
+    const light = Math.round(lower[3] + (upper[3] - lower[3]) * t);
+    return {
+      bg: `hsl(${hue} ${sat}% ${light}%)`,
+      border: `hsl(${hue} ${sat}% ${Math.max(18, light - 7)}%)`,
+      fg: "#ffffff",
+    };
+  }
+
+  function renderPieChart(byBase, totalArticles, consolidatedArticles) {
+    const svg = $("pie-svg");
+    const legend = $("pie-legend");
+    svg.replaceChildren();
+    legend.replaceChildren();
+
+    const entries = (byBase || []).filter((item) => Number(item.count) > 0);
+    const total = entries.reduce((acc, item) => acc + Number(item.count), 0) || Number(totalArticles) || 0;
+    $("pie-total").textContent = String(total);
+    $("pie-subtitle").textContent = consolidatedArticles
+      ? `${total} coletados nas bases · ${consolidatedArticles} únicos no consolidado.csv`
+      : "Distribuição entre as bases acadêmicas consultadas.";
+
+    const cx = 100;
+    const cy = 100;
+    const r = 68;
+    const circumference = 2 * Math.PI * r;
+
+    const bgCircle = document.createElementNS(SVG_NS, "circle");
+    bgCircle.setAttribute("cx", String(cx));
+    bgCircle.setAttribute("cy", String(cy));
+    bgCircle.setAttribute("r", String(r));
+    bgCircle.setAttribute("fill", "none");
+    bgCircle.setAttribute("stroke", "#edf1f7");
+    bgCircle.setAttribute("stroke-width", "32");
+    svg.append(bgCircle);
+
+    let cumulative = 0;
+    entries.forEach((item, index) => {
+      const count = Number(item.count);
+      const fraction = total > 0 ? count / total : 0;
+      const arcLength = fraction * circumference;
+      const color = PIE_COLORS[index % PIE_COLORS.length];
+
+      const slice = document.createElementNS(SVG_NS, "circle");
+      slice.setAttribute("cx", String(cx));
+      slice.setAttribute("cy", String(cy));
+      slice.setAttribute("r", String(r));
+      slice.setAttribute("fill", "none");
+      slice.setAttribute("stroke", color);
+      slice.setAttribute("stroke-width", "32");
+      slice.setAttribute("stroke-dasharray", `${arcLength} ${circumference}`);
+      slice.setAttribute("stroke-dashoffset", String(-cumulative));
+      slice.setAttribute("transform", `rotate(-90 ${cx} ${cy})`);
+      const title = document.createElementNS(SVG_NS, "title");
+      const labelName = BASE_NAMES[item.base] || item.base;
+      const pct = total > 0 ? Math.round(fraction * 100) : 0;
+      title.textContent = `${labelName}: ${count} artigo(s) (${pct}%)`;
+      slice.append(title);
+      svg.append(slice);
+      cumulative += arcLength;
+    });
+
+    const allBases = (byBase && byBase.length) ? byBase : entries;
+    if (!allBases.length) {
+      const emptyLi = document.createElement("li");
+      emptyLi.className = "pie-legend-empty";
+      emptyLi.textContent = "Sem estatísticas de coleta para exibir.";
+      legend.append(emptyLi);
+      return;
+    }
+
+    let colorIndex = 0;
+    for (const item of allBases) {
+      const count = Number(item.count) || 0;
+      const hasArticles = count > 0;
+      const color = hasArticles ? PIE_COLORS[colorIndex++ % PIE_COLORS.length] : "#cbd5e1";
+      const pct = total > 0 && hasArticles ? `${Math.round((count / total) * 100)}%` : "0%";
+      const li = document.createElement("li");
+      li.className = "pie-legend-item";
+      const swatch = document.createElement("span");
+      swatch.className = "pie-swatch";
+      swatch.style.background = color;
+      const name = document.createElement("span");
+      name.className = "pie-legend-name";
+      name.textContent = BASE_NAMES[item.base] || item.base;
+      const meta = document.createElement("span");
+      meta.className = "pie-legend-count";
+      meta.textContent = `${count} (${pct})`;
+      li.append(swatch, name, meta);
+      legend.append(li);
+    }
+  }
+
+  function createArticleRow(article) {
+    const row = document.createElement("article");
+    row.className = "article-row";
+
+    // 1. llm_score
+    const scoreCell = document.createElement("div");
+    scoreCell.className = "article-score-cell";
+    const badge = document.createElement("span");
+    badge.className = "score-square";
+    const hasScore = article.llm_score !== null && article.llm_score !== undefined && Number.isFinite(Number(article.llm_score));
+    const colors = scoreBadgeColors(hasScore ? Number(article.llm_score) : null);
+    badge.style.backgroundColor = colors.bg;
+    badge.style.borderColor = colors.border;
+    badge.style.color = colors.fg;
+    badge.textContent = hasScore ? Number(article.llm_score).toFixed(3) : "—";
+    scoreCell.append(badge);
+
+    // 2. ano
+    const yearCell = document.createElement("div");
+    yearCell.className = "article-year";
+    yearCell.textContent = article.ano || "—";
+
+    // 3. bases
+    const basesCell = document.createElement("div");
+    basesCell.className = "article-bases";
+    const basesList = String(article.bases || "")
+      .split("|")
+      .map((b) => b.trim())
+      .filter(Boolean);
+    if (basesList.length) {
+      for (const b of basesList) {
+        const pill = document.createElement("span");
+        pill.className = "base-pill";
+        pill.textContent = BASE_NAMES[b] || b;
+        basesCell.append(pill);
+      }
+    } else {
+      basesCell.textContent = "—";
+    }
+
+    // 4. info_artigos (titulo, autores, resumo) — clicável para expandir o resumo completo
+    const infoCell = document.createElement("div");
+    infoCell.className = "article-info";
+    infoCell.setAttribute("role", "button");
+    infoCell.tabIndex = 0;
+    infoCell.setAttribute("aria-expanded", "false");
+    infoCell.title = "Clique para expandir ou recolher o resumo completo";
+    const toggleExpand = () => {
+      const expanded = row.classList.toggle("expanded");
+      infoCell.setAttribute("aria-expanded", String(expanded));
+    };
+    infoCell.addEventListener("click", toggleExpand);
+    infoCell.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggleExpand();
+      }
+    });
+    const title = document.createElement("strong");
+    title.className = "article-title";
+    title.textContent = article.titulo || "Sem título";
+    const authors = document.createElement("div");
+    authors.className = "article-authors";
+    const cleanAuthors = String(article.autores || "").split("|").map((a) => a.trim()).filter(Boolean).join(", ");
+    authors.textContent = cleanAuthors || "Autores não informados";
+    const abstract = document.createElement("p");
+    abstract.className = "article-abstract";
+    abstract.textContent = article.resumo || "Resumo não disponível.";
+    infoCell.append(title, authors, abstract);
+
+    // 5. doi
+    const doiCell = document.createElement("div");
+    doiCell.className = "article-doi";
+    const rawDoi = String(article.doi || "").trim();
+    if (rawDoi) {
+      const cleanDoi = rawDoi.replace(/^https?:\/\/(dx\.)?doi\.org\//i, "");
+      const link = document.createElement("a");
+      link.href = `https://doi.org/${encodeURI(cleanDoi)}`;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = cleanDoi;
+      link.title = `Abrir https://doi.org/${cleanDoi}`;
+      doiCell.append(link);
+    } else {
+      doiCell.textContent = "—";
+    }
+
+    row.append(scoreCell, yearCell, basesCell, infoCell, doiCell);
+    return row;
+  }
+
+  function syncArticlesViewportHeight() {
+    const body = $("articles-body");
+    if (!body) return;
+    const rows = [...body.querySelectorAll(".article-row")];
+    if (rows.length <= 5) {
+      body.style.removeProperty("max-height");
+      return;
+    }
+    const visible = rows.slice(0, 5);
+    const gap = 8;
+    const total = visible.reduce((sum, r) => sum + r.offsetHeight, 0) + gap * (visible.length - 1);
+    if (total > 0) {
+      body.style.maxHeight = `${total}px`;
+    }
+  }
+
+  function renderTopArticles() {
+    if (!currentResearchData) return;
+    const body = $("articles-body");
+    const articles = (currentResearchData.articles || []).slice(0, 25);
+    body.replaceChildren();
+    body.scrollTop = 0;
+
+    if (!articles.length) {
+      body.style.removeProperty("max-height");
+      const empty = document.createElement("div");
+      empty.className = "articles-empty";
+      empty.textContent = "Nenhum artigo ranqueado encontrado nesta pesquisa.";
+      body.append(empty);
+      return;
+    }
 
     const fragment = document.createDocumentFragment();
-    for (const research of items) {
-      const card = document.createElement("article");
-      card.className = "history-card";
-      const header = document.createElement("div");
-      header.className = "history-head";
-      const name = document.createElement("div");
-      name.className = "history-name";
-      const folderIcon = document.createElement("span");
-      folderIcon.className = "folder-icon";
-      folderIcon.textContent = "▰";
-      const titleWrap = document.createElement("div");
-      const title = document.createElement("strong");
-      title.textContent = research.id;
-      const subtitle = document.createElement("small");
-      subtitle.textContent = `${research.files.length} arquivos disponíveis`;
-      titleWrap.append(title, subtitle);
-      name.append(folderIcon, titleWrap);
-      const count = document.createElement("span");
-      count.className = "file-count";
-      count.textContent = `${research.files.length} arquivos`;
-      header.append(name, count);
+    for (const article of articles) {
+      fragment.append(createArticleRow(article));
+    }
+    body.append(fragment);
+    window.requestAnimationFrame(() => syncArticlesViewportHeight());
+  }
 
-      const fileGrid = document.createElement("div");
-      fileGrid.className = "file-grid";
-      for (const filename of research.files) {
-        const link = document.createElement("a");
-        link.className = "file-link";
-        link.href = `/api/history/${encodeURIComponent(research.id)}/${encodeURIComponent(filename)}`;
-        link.download = filename;
-        const icon = document.createElement("span");
-        icon.className = "file-type";
-        icon.textContent = fileIcon(filename);
-        const label = document.createElement("span");
-        label.textContent = filename;
-        link.append(icon, label);
-        fileGrid.append(link);
-      }
-      card.append(header, fileGrid);
-      fragment.append(card);
+  async function openResearch(researchId) {
+    try {
+      const detail = await fetchJson(`/api/history/${encodeURIComponent(researchId)}`, { cache: "no-store" });
+      currentResearchData = detail;
+      activeResearchId = detail.id;
+      const keywords = cleanKeywords(detail.query, detail.id);
+      setView("historico", { keywords });
+      activeResearchId = detail.id;
+      highlightActiveHistoryItem();
+      $("files-subtitle").textContent = `Pasta ./saida/${detail.id} (${(detail.files || []).length} arquivos)`;
+      renderPieChart(detail.by_base || [], detail.total_articles, detail.consolidated_articles);
+      renderFileLinks($("research-files"), detail.id, detail.files || []);
+      renderTopArticles();
+    } catch (error) {
+      notify(error.message, true);
+    }
+  }
+
+  function renderHistory(items) {
+    historyItems = items || [];
+    const root = $("history-list");
+    root.replaceChildren();
+    $("history-count").textContent = String(historyItems.length);
+    $("history-empty").classList.toggle("hidden", historyItems.length > 0);
+    if (!historyItems.length) return;
+
+    const fragment = document.createDocumentFragment();
+    for (const research of historyItems) {
+      const keywords = cleanKeywords(research.query, research.id);
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "chat-history-item";
+      btn.dataset.id = research.id;
+      btn.classList.toggle("active", research.id === activeResearchId);
+      btn.title = `${keywords}\n(${research.id})`;
+      const textWrap = document.createElement("span");
+      textWrap.className = "chat-history-text";
+      const title = document.createElement("strong");
+      title.textContent = keywords;
+      const sub = document.createElement("small");
+      sub.textContent = formatTimestampId(research.id);
+      textWrap.append(title, sub);
+      btn.append(textWrap);
+      btn.addEventListener("click", () => openResearch(research.id));
+      fragment.append(btn);
     }
     root.append(fragment);
   }
@@ -242,7 +571,6 @@
     catch (error) { notify(error.message, true); }
     finally { if (button) button.disabled = false; }
   }
-
   function updateOllama(status) {
     const dot = $("ollama-dot");
     const label = $("ollama-label");
@@ -285,9 +613,17 @@
     progressCard.classList.toggle("hidden", !showProgress);
     $("progress-stage").textContent = status.stage;
     $("progress-number").textContent = status.total ? `${status.processed} / ${status.total}` : "";
-    const track = $("progress-fill").parentElement;
-    track.classList.toggle("indeterminate", status.running && !status.total);
-    $("progress-fill").style.width = status.total ? `${Math.round(status.processed / status.total * 100)}%` : status.running ? "28%" : "0%";
+    const fill = $("progress-fill");
+    const track = fill.parentElement;
+    const isIndeterminate = Boolean(status.running && !status.total);
+    track.classList.toggle("indeterminate", isIndeterminate);
+    if (isIndeterminate) {
+      fill.style.removeProperty("width");
+    } else if (status.total) {
+      fill.style.width = `${Math.round((status.processed / status.total) * 100)}%`;
+    } else {
+      fill.style.width = status.stage === "concluído" ? "100%" : "0%";
+    }
     $("progress-detail").textContent = status.total
       ? `Triagem de artigos${status.current ? ` · ${status.current}` : ""}`
       : status.running ? status.stage === "buscando artigos" ? "Consultando as bases acadêmicas em paralelo…" : status.stage === "carregando modelo" ? "O serviço Ollama está sendo preparado…" : "Preparando execução…"
@@ -335,14 +671,17 @@
       notify(error.message, true);
     }
   });
-  $("new-from-empty").addEventListener("click", () => setView("nova"));
-  $("open-history").addEventListener("click", () => setView("historico"));
+  $("open-history").addEventListener("click", async () => {
+    if (!historyItems.length) await refreshHistory();
+    if (historyItems.length) openResearch(historyItems[0].id);
+  });
   $("peso_aderencia").addEventListener("input", (e) => rebalanceWeights("aderencia", e.target.value));
   $("peso_aderencia_num").addEventListener("change", (e) => rebalanceWeights("aderencia", e.target.value));
   $("peso_ano").addEventListener("input", (e) => rebalanceWeights("ano", e.target.value));
   $("peso_ano_num").addEventListener("change", (e) => rebalanceWeights("ano", e.target.value));
   $("peso_citacoes").addEventListener("input", (e) => rebalanceWeights("citacoes", e.target.value));
   $("peso_citacoes_num").addEventListener("change", (e) => rebalanceWeights("citacoes", e.target.value));
+
 
   fetchJson("/api/config")
     .then((defaults) => {
@@ -355,6 +694,8 @@
       catch { populate(defaults); }
     })
     .catch((error) => notify(`Não foi possível iniciar a interface: ${error.message}`, true));
+
+  refreshHistory();
 
   async function poll() {
     try { updateStatus(await fetchJson("/api/status", { cache: "no-store" })); }

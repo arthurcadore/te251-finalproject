@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import csv
+import json
+import math
 import hmac
 import ipaddress
 import os
@@ -320,7 +323,7 @@ def _executar_job(
 
 @app.get("/", response_class=FileResponse)
 def index() -> FileResponse:
-    return FileResponse(UI_PATH, media_type="text/html; charset=utf-8")
+    return FileResponse(UI_PATH, media_type="text/html; charset=utf-8", headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/login", response_class=FileResponse)
@@ -373,14 +376,128 @@ def auth_logout(request: Request, response: Response) -> dict[str, str]:
     return {"message": "Sessão encerrada."}
 
 
+def _pasta_pesquisa(research_id: str) -> Path:
+    if Path(research_id).name != research_id:
+        raise HTTPException(status_code=404, detail="Pesquisa não encontrada.")
+    pasta = SAIDA_PATH / research_id
+    raiz = SAIDA_PATH.resolve()
+    if not pasta.is_dir() or pasta.is_symlink() or not pasta.resolve().is_relative_to(raiz):
+        raise HTTPException(status_code=404, detail="Pesquisa não encontrada.")
+    return pasta
+
+
+def _desempacotar_aspas_simples(texto: str) -> str:
+    s = texto.strip()
+    if len(s) >= 2 and s[0] == "'" and s[-1] == "'":
+        return s[1:-1].strip()
+    return s
+
+
+def _ler_query(pasta: Path) -> str:
+    relatorio = pasta / "relatorio.json"
+    if relatorio.is_file() and not relatorio.is_symlink():
+        try:
+            dados = json.loads(relatorio.read_text(encoding="utf-8"))
+            if isinstance(dados, dict) and str(dados.get("query") or "").strip():
+                return _desempacotar_aspas_simples(str(dados["query"]))
+        except Exception:  # noqa: BLE001
+            pass
+    for nome_yaml in ("config.yaml", "config_usada.yaml"):
+        arq = pasta / nome_yaml
+        if arq.is_file() and not arq.is_symlink():
+            try:
+                dados = yaml.safe_load(arq.read_text(encoding="utf-8"))
+                if isinstance(dados, dict) and str(dados.get("query") or "").strip():
+                    return _desempacotar_aspas_simples(str(dados["query"]))
+            except Exception:  # noqa: BLE001
+                pass
+    partes = pasta.name.split("_", 2)
+    return partes[2].replace("-", " ") if len(partes) == 3 else pasta.name
+
+
+def _ler_artigos_ordenados(pasta: Path) -> list[dict[str, Any]]:
+    for nome_csv in ("ranking.csv", "consolidado.csv"):
+        arq = pasta / nome_csv
+        if not arq.is_file() or arq.is_symlink():
+            continue
+        try:
+            with arq.open("r", encoding="utf-8-sig", newline="") as f:
+                linhas = list(csv.DictReader(f))
+        except Exception:  # noqa: BLE001
+            continue
+        artigos: list[dict[str, Any]] = []
+        for linha in linhas:
+            bruto = str(linha.get("llm_score") or "").strip().replace(",", ".")
+            try:
+                score = float(bruto)
+                if not math.isfinite(score):
+                    score = None
+            except ValueError:
+                score = None
+            artigos.append({
+                "llm_score": score,
+                "ano": str(linha.get("ano") or "").strip(),
+                "bases": str(linha.get("bases") or "").strip(),
+                "titulo": str(linha.get("titulo") or "").strip(),
+                "autores": str(linha.get("autores") or "").strip(),
+                "resumo": str(linha.get("resumo") or "").strip(),
+                "doi": str(linha.get("doi") or "").strip(),
+                "llm_label": str(linha.get("llm_label") or "").strip(),
+            })
+        artigos.sort(key=lambda item: (item["llm_score"] is None, -(item["llm_score"] or 0.0)))
+        return artigos
+    return []
+
+
 @app.get("/api/history")
 def history() -> list[dict[str, Any]]:
     SAIDA_PATH.mkdir(parents=True, exist_ok=True)
     pesquisas = []
     for pasta in sorted((p for p in SAIDA_PATH.iterdir() if p.is_dir() and not p.is_symlink()), reverse=True):
         arquivos = sorted(p.name for p in pasta.iterdir() if p.is_file() and not p.is_symlink())
-        pesquisas.append({"id": pasta.name, "files": arquivos})
+        pesquisas.append({"id": pasta.name, "query": _ler_query(pasta), "files": arquivos})
     return pesquisas
+
+
+@app.get("/api/history/{research_id}")
+def history_detail(research_id: str) -> dict[str, Any]:
+    pasta = _pasta_pesquisa(research_id)
+    arquivos = sorted(p.name for p in pasta.iterdir() if p.is_file() and not p.is_symlink())
+    query = _ler_query(pasta)
+    por_base: list[dict[str, Any]] = []
+    consolidado_info: dict[str, Any] = {}
+    relatorio = pasta / "relatorio.json"
+    if relatorio.is_file() and not relatorio.is_symlink():
+        try:
+            dados = json.loads(relatorio.read_text(encoding="utf-8"))
+            if isinstance(dados, dict):
+                consolidado_info = dados.get("consolidado") or {}
+                for b in dados.get("bases") or []:
+                    if isinstance(b, dict) and b.get("base"):
+                        por_base.append({
+                            "base": str(b["base"]),
+                            "count": int(b.get("gravados") or 0),
+                            "status": str(b.get("status") or ""),
+                        })
+        except Exception:  # noqa: BLE001
+            pass
+    artigos = _ler_artigos_ordenados(pasta)
+    if not por_base and artigos:
+        contagem: dict[str, int] = {}
+        for art in artigos:
+            for b in (x.strip() for x in art["bases"].split("|") if x.strip()):
+                contagem[b] = contagem.get(b, 0) + 1
+        por_base = [{"base": k, "count": v, "status": "ok"} for k, v in contagem.items()]
+    total_por_base = sum(item["count"] for item in por_base)
+    return {
+        "id": pasta.name,
+        "query": query,
+        "files": arquivos,
+        "total_articles": total_por_base,
+        "consolidated_articles": int(consolidado_info.get("linhas") or len(artigos)),
+        "by_base": por_base,
+        "articles": artigos,
+    }
 
 
 @app.get("/api/history/{research_id}/{filename}")
