@@ -26,7 +26,8 @@ async def test_interface_assets_endpoints_and_initial_state() -> None:
         configuracao = await client.get("/api/config")
         status = await client.get("/api/status")
 
-    assert pagina.status_code == 200 and "Histórico de pesquisas" in pagina.text
+    assert pagina.status_code == 200 and "HISTÓRICO DE PESQUISAS" in pagina.text
+    assert 'id="history-list"' in pagina.text
     assert login_page.status_code == 200 and "Token de acesso" in login_page.text
     assert login_css.status_code == 200 and ".login-card" in login_css.text
     assert login_js.status_code == 200 and "/api/auth/login" in login_js.text
@@ -39,6 +40,7 @@ async def test_interface_assets_endpoints_and_initial_state() -> None:
     assert configuracao.json()["config"]["query"] == ""
     assert configuracao.json()["criteria"] == ""
     assert configuracao.json()["model"] == "qwen3.5:0.8b"
+    assert configuracao.json()["weights"] == {"aderencia": 70, "ano": 15, "citacoes": 15}
     assert status.json()["running"] is False
 
 
