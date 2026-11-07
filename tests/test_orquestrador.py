@@ -181,3 +181,32 @@ def test_cli_sobrescritas_e_sem_raw_json(tmp_path, monkeypatch, capsys):
     assert len(linhas) == 4 and "raw_json" not in linhas[0]
     assert "deep learning" in (d / "config_usada.yaml").read_text()
     assert not (d / "openalex.csv").exists()
+
+
+@respx.mock
+async def test_tempo_limite_da_pesquisa_encerra_bases_e_gera_consolidado(tmp_path):
+    async def openalex_lento_na_pagina2(request):
+        if request.url.params["cursor"] != "*":
+            await asyncio.sleep(5)  # a segunda página não chega antes do prazo
+        return _openalex(request)
+
+    respx.get(URL_OPENALEX).mock(side_effect=openalex_lento_na_pagina2)
+    respx.get(URL_ARXIV).mock(side_effect=_arxiv)
+    c = cfg(tmp_path, max_artigos_por_base=10, limites={"arxiv": {"taxa_rps": 100}},
+            execucao={"timeout_pesquisa_s": 0.6})
+    t0 = asyncio.get_running_loop().time()
+    codigo, d = await executar(c, CRED)
+    duracao = asyncio.get_running_loop().time() - t0
+
+    rel = {b["base"]: b for b in json.loads((d / "relatorio.json").read_text())["bases"]}
+    assert duracao < 3
+    assert codigo == 0
+    assert rel["openalex"]["status"] == "parcial"
+    assert "tempo limite da pesquisa" in rel["openalex"]["motivo"]
+    assert rel["openalex"]["gravados"] > 0  # a primeira página foi mantida
+    assert (d / "consolidado.csv").exists()
+
+
+def test_config_timeout_pesquisa_opcional():
+    assert config().execucao.timeout_pesquisa_s is None
+    assert config(execucao={"timeout_pesquisa_s": 300}).execucao.timeout_pesquisa_s == 300

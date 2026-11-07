@@ -157,9 +157,11 @@ Também é possível ranquear um CSV já existente sem iniciar uma nova busca:
 python model/llm_pipeline.py saida/<execucao>/consolidado.csv --criteria "Critérios de inclusão e exclusão..."
 ```
 
+O campo "Timeout Pesquisa (s)" (padrão 300) limita o tempo da coleta: ao passar dele, as bases param de buscar, ficam com o que já encontraram e a execução segue para a classificação. No `config.yaml`, o mesmo limite é `execucao.timeout_pesquisa_s` (sem limite se ausente).
+
 Durante a execução, a barra ao lado do título mostra a etapa (busca, classificação com contagem de artigos) e o botão vira "Gerando…", com a opção de cancelar; ao cancelar, o que já foi coletado ou classificado fica no histórico. Ao terminar, o botão fica verde com "Ver resultado".
 
-No histórico, cada pesquisa mostra o tempo de busca, o tempo de processamento (triagem LLM) e o total no canto superior direito (registrados em `tempos.json`), e um grafo que liga os artigos mais bem ranqueados às referências que compartilham. O grafo aceita zoom (roda do mouse) e arraste; passar o mouse mostra os detalhes e clicar abre o DOI.
+No histórico, cada pesquisa mostra o tempo de busca, o tempo de processamento (triagem LLM) e o total no canto superior direito (registrados em `tempos.json`), Com `python -m coletor --web --graph`, o histórico mostra também, à direita, um grafo que liga os artigos mais bem ranqueados às referências que compartilham (zoom com a roda do mouse, arraste, detalhes ao passar o mouse, clique abre o DOI). Sem `--graph`, o histórico mostra os artigos por base e os arquivos lado a lado, com a lista do ranking embaixo.
 
 A interface vem com a consulta `SAR AND Agricultura` e critérios de triagem para SAR aplicado à agricultura como padrão, e tem tema claro e escuro (botão na barra lateral). Se uma execução for interrompida antes do fim do ranking, o histórico avisa e mostra o resultado parcial ou o consolidado sem justificativa.
 

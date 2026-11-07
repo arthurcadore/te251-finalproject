@@ -6,12 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f4f7fc">
   <title>Coletor de artigos científicos</title>
-  <script src="/assets/theme.js?v=11"></script>
-  <link rel="stylesheet" href="/assets/theme.css?v=11">
-  <link rel="stylesheet" href="/assets/styles.css?v=11">
-  <link rel="stylesheet" href="/assets/forms.css?v=11">
-  <link rel="stylesheet" href="/assets/model.css?v=11">
-  <link rel="stylesheet" href="/assets/session.css?v=11">
+  <script src="/assets/theme.js?v=13"></script>
+  <link rel="stylesheet" href="/assets/theme.css?v=13">
+  <link rel="stylesheet" href="/assets/styles.css?v=13">
+  <link rel="stylesheet" href="/assets/forms.css?v=13">
+  <link rel="stylesheet" href="/assets/model.css?v=13">
+  <link rel="stylesheet" href="/assets/session.css?v=13">
 </head>
 
 <body>
@@ -40,13 +40,13 @@
           <div class="model-heading">
             <span class="panel-icon green" aria-hidden="true">◉</span>
             <div class="model-title">
-              <h2>Modelo de Triagem</h2>
+              <h2 id="model-heading">Modelo selecionado</h2>
             </div>
             <button class="button button-soft model-refresh" id="refresh-models" type="button" title="Atualizar modelos"
               aria-label="Atualizar modelos">↻</button>
           </div>
           <div class="model-controls">
-            <div class="field model-select-field"><label for="model">Modelo Selecionado</label><select id="model"
+            <div class="field model-select-field"><label for="model">Selecionar Modelo:</label><select id="model"
                 disabled>
                 <option value="">Carregando modelos Ollama…</option>
               </select></div>
@@ -104,9 +104,15 @@
                     <p>Defina a consulta e as bases acadêmicas.</p>
                   </div>
                 </div>
-                <div class="max-inline">
-                  <label for="max" style="font-size: 14px;">N° máximo de artigos por base:</label>
-                  <input id="max" type="number" min="1" value="100">
+                <div class="search-limits">
+                  <div class="max-inline">
+                    <label for="max">N° máximo de artigos por base:</label>
+                    <input id="max" type="number" min="1" value="100">
+                  </div>
+                  <div class="max-inline">
+                    <label for="timeout_pesquisa" title="Ao passar deste tempo, a coleta para e segue para a classificação com os artigos já encontrados">Timeout Pesquisa (s):</label>
+                    <input id="timeout_pesquisa" type="number" min="10" max="7200" step="10" value="300">
+                  </div>
                 </div>
               </div>
               <div class="field"><input id="query" aria-label="Consulta"
@@ -171,7 +177,7 @@
                 </div>
               <div class="weight-item temperature-item">
                 <div class="weight-head">
-                  <label for="temperatura">Temperatura do modelo <small>(padrão 0,1; 0 = determinístico)</small></label>
+                  <label for="temperatura">Temperatura do modelo <small>(0 = determinístico)</small></label>
                   <div class="weight-value"><input id="temperatura_num" type="number" min="0" max="1" step="0.05"
                       value="0.1" aria-label="Temperatura do modelo"></div>
                 </div>
@@ -232,7 +238,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse at ipsum bl
 
       <section id="view-historico" class="view">
         <div class="research-dashboard" id="research-dashboard">
-          <div class="research-top">
+          <div class="research-top" id="research-top">
             <div class="research-left">
             <section class="panel pie-panel">
               <div class="panel-heading compact-heading">
@@ -265,7 +271,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse at ipsum bl
             </section>
             </div>
 
-            <section class="panel graph-panel">
+            <section class="panel graph-panel hidden" id="graph-panel">
               <div class="panel-heading compact-heading">
                 <div>
                   <h2>Grafo de artigos e referências:</h2>
@@ -317,7 +323,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse at ipsum bl
       </section>
     </main>
   </div>
-  <script src="/assets/app.js?v=11" defer></script>
+  <script src="/assets/app.js?v=13" defer></script>
 </body>
 
 </html>

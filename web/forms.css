@@ -817,15 +817,26 @@ textarea {
 }
 
 /* ---------- Histórico: coluna esquerda (pizza + arquivos) e grafo à direita ---------- */
+/* Sem --graph: "Artigos encontrados por base" e "Arquivos da pesquisa" lado a lado. */
 .research-top {
-  grid-template-columns: minmax(320px, 1fr) minmax(360px, 1fr);
+  grid-template-columns: 1fr;
 }
 
 .research-left {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(320px, 0.95fr) minmax(320px, 1.05fr);
   gap: 14px;
   min-width: 0;
+}
+
+/* Com --graph: pizza e arquivos empilhados à esquerda, grafo à direita. */
+.research-top.with-graph {
+  grid-template-columns: minmax(320px, 1fr) minmax(360px, 1fr);
+}
+
+.research-top.with-graph .research-left {
+  display: flex;
+  flex-direction: column;
 }
 
 .graph-panel {
@@ -1406,4 +1417,65 @@ textarea {
 
 .button.run-done:hover {
   background: #138a6c;
+}
+
+/* Dois campos ao lado do título de "Parâmetros de Busca": máximo por base e timeout da pesquisa. */
+.search-heading .panel-heading-main {
+  flex: 1 1 auto;
+}
+
+.search-heading .panel-heading-main h2 {
+  white-space: nowrap;
+}
+
+.search-heading .panel-heading-main p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-limits {
+  display: flex;
+  flex: none;
+  gap: 14px;
+}
+
+/* Rótulo acima do número: os dois campos cabem lado a lado ao lado do título. */
+.search-limits .max-inline {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding-left: 14px;
+}
+
+.search-limits .max-inline label {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.search-limits .max-inline input[type="number"] {
+  width: 78px;
+  padding: 4px 8px;
+  text-align: left;
+}
+
+/* Telas largas: o conteúdo (até 1600 px) fica centralizado à direita da barra lateral, com margens iguais.
+   Antes ficava preso à esquerda e toda a sobra ia para a direita. O % usa a largura do body, que já
+   desconta a barra de rolagem. */
+.main-area {
+  max-width: none;
+}
+
+@media (min-width: 1181px) {
+  .main-area {
+    padding-left: max(38px, calc((100% - 250px - 1600px) / 2 + 38px));
+    padding-right: max(38px, calc((100% - 250px - 1600px) / 2 + 38px));
+  }
+}
+
+@media (max-width: 1100px) {
+  .research-top.with-graph,
+  .research-left {
+    grid-template-columns: 1fr;
+  }
 }

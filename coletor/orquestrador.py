@@ -89,9 +89,14 @@ async def executar(
         oc = _opencitations(config, cred, cache, opcoes_limitador or {}) if config.enriquecimento.referencias else None
         ests = [EstatisticasBase(base=b, pedidos=config.max_artigos_por_base) for b in config.bases_ativas]
         gravados: dict[str, list[Registro]] = {e.base: [] for e in ests}  # para o consolidado
+        limite = config.execucao.timeout_pesquisa_s
+        prazo = asyncio.get_running_loop().time() + limite if limite else None
+        if limite:
+            log.info("tempo limite da pesquisa: %.0f s", limite)
         try:
             resultados = await asyncio.gather(
-                *(_executar_base(e, config, cred, dir_saida, cache, opcoes_limitador or {}, oc, gravados[e.base])
+                *(_executar_base(e, config, cred, dir_saida, cache, opcoes_limitador or {}, oc, gravados[e.base],
+                                 prazo=prazo)
                   for e in ests),
                 return_exceptions=True,
             )
@@ -174,6 +179,8 @@ async def _executar_base(
     opcoes_limitador: dict,
     oc: OpenCitations | None = None,
     acumulado: list[Registro] | None = None,
+    *,
+    prazo: float | None = None,
 ) -> None:
     blog = logging.getLogger(f"coletor.{est.base}")
     t0 = time.monotonic()
@@ -222,14 +229,22 @@ async def _executar_base(
         blog.info("início: consulta %r; filtros nativos %s; locais %s",
                   est.consulta_traduzida, plano.nativos or "—", plano.locais or "—")
 
-        async for lote in adaptador.buscar(arvore, plano, config.max_artigos_por_base):
-            lote = await adaptador.aplicar_enriquecimento(lote, config.enriquecimento)
-            est.gravados += escritor.escrever(lote)
-            if acumulado is not None:
-                for r in lote:  # o consolidado não usa estes campos grandes
-                    r.raw = None
-                    r.texto_completo = None
-                acumulado.extend(lote)
+        try:
+            async with asyncio.timeout_at(prazo):
+                async for lote in adaptador.buscar(arvore, plano, config.max_artigos_por_base):
+                    lote = await adaptador.aplicar_enriquecimento(lote, config.enriquecimento)
+                    est.gravados += escritor.escrever(lote)
+                    if acumulado is not None:
+                        for r in lote:  # o consolidado não usa estes campos grandes
+                            r.raw = None
+                            r.texto_completo = None
+                        acumulado.extend(lote)
+        except TimeoutError:
+            # Só o prazo da pesquisa gera TimeoutError aqui (timeouts HTTP são exceções do httpx).
+            est.status = "parcial" if est.gravados else "falhou"
+            est.motivo = (f"tempo limite da pesquisa ({config.execucao.timeout_pesquisa_s:.0f} s) atingido "
+                          f"com {est.gravados} de {config.max_artigos_por_base} artigos")
+            blog.warning("base encerrada: %s", est.motivo)
     except EncerrarBase as e:
         est.status = e.status or ("parcial" if est.gravados else "falhou")
         est.motivo = higienizar_texto(e.motivo)

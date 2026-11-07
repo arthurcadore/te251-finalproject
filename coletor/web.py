@@ -125,6 +125,8 @@ class LoginRequest(BaseModel):
 
 
 QUERY_PADRAO = "SAR AND Agricultura"
+# Tempo máximo da coleta pela interface; ao estourar, segue para a classificação com o que já chegou.
+TIMEOUT_PESQUISA_PADRAO_S = 300
 
 # Mude a versão sempre que a consulta ou os critérios padrão mudarem: a interface substitui uma vez os
 # valores salvos no navegador pelos novos padrões.
@@ -181,7 +183,13 @@ def _config_padrao() -> dict[str, Any]:
         "filtros": {"ano_de": None, "ano_ate": None, "tipos": [], "idiomas": [], "somente_oa": False, "campo_busca": "tudo"},
         "enriquecimento": {"referencias": True, "resolver_ids_para_doi": True, "texto_completo": True},
         "saida": {"diretorio": "saida", "raw_json": True, "separador_lista": " | "},
-        "execucao": {"max_paginas_extras_filtro_local": 10, "cache_http": True, "timeout_s": 30, "log_nivel": "INFO"},
+        "execucao": {
+            "max_paginas_extras_filtro_local": 10,
+            "cache_http": True,
+            "timeout_s": 30,
+            "timeout_pesquisa_s": TIMEOUT_PESQUISA_PADRAO_S,
+            "log_nivel": "INFO",
+        },
         "limites": {},
     }
 
@@ -453,6 +461,8 @@ def _executar_job(
         )
         (pasta_saida / "criterios.txt").write_text(criteria.rstrip() + "\n", encoding="utf-8")
         tempos: dict[str, Any] = {"inicio": datetime.now().astimezone().isoformat(timespec="seconds")}
+        # O status passa a refletir o modelo escolhido já durante o carregamento (não o anterior).
+        _atualizar_estado(ollama_status="carregando", ollama_model=model, ollama_error="", ollama_accelerator="não informado")
         _carregar_modelo(model)
         _atualizar_estado(ollama_status="pronto", ollama_model=model, ollama_error="")
         _verificar_cancelamento()
@@ -503,6 +513,10 @@ def _executar_job(
             output=str(ranking),
             error="",
         )
+    except RuntimeError as erro:
+        if _job_state.get("ollama_status") == "carregando":
+            _atualizar_estado(ollama_status="erro", ollama_error=str(erro))
+        _atualizar_estado(running=False, stage="falhou", error=f"{type(erro).__name__}: {erro}")
     except (ExecucaoCancelada, RankingCancelado):
         _atualizar_estado(running=False, stage="cancelado", error="")
     except Exception as erro:  # noqa: BLE001 — erros são reportados na interface, não encerram o servidor
@@ -785,8 +799,15 @@ def _montar_grafo(linhas: list[dict[str, str]]) -> dict[str, Any]:
     }
 
 
+def _grafo_habilitado() -> bool:
+    """O grafo do histórico só aparece quando o servidor é iniciado com --graph."""
+    return os.getenv("COLETOR_WEB_GRAFO", "0") == "1"
+
+
 @app.get("/api/history/{research_id}/graph")
 def history_graph(research_id: str) -> dict[str, Any]:
+    if not _grafo_habilitado():
+        raise HTTPException(status_code=404, detail="Grafo desabilitado: inicie o servidor com --graph.")
     pasta = _pasta_pesquisa(research_id)
     linhas, _ = _ler_linhas_fonte(pasta)
     return _montar_grafo(linhas)
@@ -813,6 +834,7 @@ def get_config() -> dict[str, Any]:
         "weights": {k: round(v * 100) for k, v in PESOS_SCORE.items()},
         "type_values": {k: round(v * 100) for k, v in VALORES_TIPO_PADRAO.items()},
         "temperature": TEMPERATURA_PADRAO,
+        "graph": _grafo_habilitado(),
     }
 
 

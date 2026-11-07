@@ -35,6 +35,8 @@ def _parser() -> argparse.ArgumentParser:
                    help="abre a interface HTTP (padrão: todas as interfaces; exige token)")
     p.add_argument("--host", default="0.0.0.0", help="endereço de bind web (padrão: 0.0.0.0)")
     p.add_argument("--port", type=int, default=8000, help="porta da interface HTTP (padrão: 8000)")
+    p.add_argument("--graph", action="store_true",
+                   help="com --web: mostra no histórico o grafo de artigos e referências compartilhadas")
     p.add_argument("--listar-bases", action="store_true",
                    help="mostra bases, status (ativa/inativa) e credenciais detectadas")
     return p
@@ -74,6 +76,8 @@ def listar_bases(ativas: list[str] | None, cred: Credenciais) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    if args.graph and not args.web:
+        print("aviso: --graph só tem efeito com --web; ignorado.", file=sys.stderr)
     if args.web:
         if not 1 <= args.port <= 65535:
             print("erro: --port deve estar entre 1 e 65535", file=sys.stderr)
@@ -92,7 +96,11 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         import uvicorn
 
+        # Lido pelo servidor (mesmo processo): liga ou desliga o grafo no histórico.
+        os.environ["COLETOR_WEB_GRAFO"] = "1" if args.graph else "0"
         print(f"Interface web em http://{args.host}:{args.port} (Ctrl+C para encerrar)")
+        if args.graph:
+            print("Grafo de artigos e referências habilitado no histórico.")
         if not host_local:
             print("Acesso remoto protegido por página de login e sessão; use HTTPS via proxy reverso.")
         uvicorn.run("coletor.web:app", host=args.host, port=args.port, reload=False)

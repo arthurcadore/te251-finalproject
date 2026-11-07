@@ -39,3 +39,5 @@
 .theme-toggle:hover{border-color:var(--blue);color:var(--ink)}
 .theme-toggle-icon{width:14px;text-align:center;font-size:12px}
 @media(max-width:650px){.sidebar-bottom .theme-toggle{display:none}}
+/* Título "Modelo <X> selecionado": nomes longos são abreviados. */
+.model-heading h2{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.3;white-space:normal;overflow-wrap:anywhere}

@@ -70,6 +70,9 @@ class Execucao(_Estrito):
     max_paginas_extras_filtro_local: int = Field(10, ge=0)
     cache_http: bool = True
     timeout_s: float = Field(30, gt=0)
+    # Tempo máximo da coleta (todas as bases em paralelo). Ao estourar, cada base para de buscar, fica com
+    # status "parcial" e o consolidado é gerado com o que já foi gravado. None = sem limite.
+    timeout_pesquisa_s: float | None = Field(None, gt=0)
     log_nivel: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
 

@@ -332,6 +332,7 @@ def test_montar_grafo_liga_artigos_por_referencias_compartilhadas() -> None:
 
 async def test_history_detail_traz_tempos_e_grafo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(web, "SAIDA_PATH", tmp_path)
+    monkeypatch.setenv("COLETOR_WEB_GRAFO", "1")
     nova = tmp_path / "2026-11-07_120000_nova"
     nova.mkdir()
     (nova / "consolidado.csv").write_text("doi,titulo,ano,bases,referencias\n", encoding="utf-8")
@@ -537,3 +538,80 @@ async def test_cancel_sem_execucao_retorna_409() -> None:
     async with httpx.AsyncClient(transport=transport, base_url="http://127.0.0.1") as client:
         resposta = await client.post("/api/cancel")
     assert resposta.status_code == 409
+
+
+def test_job_mostra_o_modelo_escolhido_durante_o_carregamento(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    config = _preparar_job(tmp_path, monkeypatch)
+    vistos: list[tuple[str, str]] = []
+    carregados: list[str] = []
+
+    def carregar(modelo):
+        vistos.append((web._job_state["ollama_status"], web._job_state["ollama_model"]))
+        carregados.append(modelo)
+
+    async def execute(config, credentials, *, dir_saida_override):
+        (dir_saida_override / "consolidado.csv").write_text("doi\n", encoding="utf-8")
+        return 0, dir_saida_override
+
+    def generate(consolidado, criteria, **kwargs):
+        destino = consolidado.parent / "ranking.csv"
+        destino.write_text("doi,llm_score\n", encoding="utf-8")
+        assert kwargs["modelo"] == "llama3.2:3b"
+        return destino
+
+    monkeypatch.setattr(web, "_carregar_modelo", carregar)
+    monkeypatch.setattr(web, "executar", execute)
+    monkeypatch.setattr(web, "gerar_ranking", generate)
+    web._atualizar_estado(ollama_model="qwen3.5:0.8b", ollama_status="pronto")
+    web._executar_job(config, "Critério", "llama3.2:3b")
+
+    assert carregados == ["llama3.2:3b"]
+    assert vistos == [("carregando", "llama3.2:3b")]
+    assert web._job_state["ollama_model"] == "llama3.2:3b"
+    assert web._job_state["stage"] == "concluído"
+
+
+def test_falha_ao_carregar_modelo_aparece_no_status(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    config = _preparar_job(tmp_path, monkeypatch)
+
+    def carregar(modelo):
+        raise RuntimeError(f"O modelo {modelo!r} não está instalado no Ollama.")
+
+    monkeypatch.setattr(web, "_carregar_modelo", carregar)
+    web._executar_job(config, "Critério", "inexistente:1b")
+    assert web._job_state["stage"] == "falhou"
+    assert web._job_state["ollama_status"] == "erro"
+    assert "inexistente:1b" in web._job_state["error"]
+    web._atualizar_estado(ollama_status="pronto", ollama_error="")
+
+
+async def test_grafo_desabilitado_sem_opcao_graph(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(web, "SAIDA_PATH", tmp_path)
+    monkeypatch.delenv("COLETOR_WEB_GRAFO", raising=False)
+    pesquisa = tmp_path / "2026-11-07_120000_x"
+    pesquisa.mkdir()
+    (pesquisa / "consolidado.csv").write_text("doi,titulo,ano,bases,referencias\n", encoding="utf-8")
+    transport = httpx.ASGITransport(app=web.app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://127.0.0.1") as client:
+        configuracao = (await client.get("/api/config")).json()
+        grafo = await client.get(f"/api/history/{pesquisa.name}/graph")
+        monkeypatch.setenv("COLETOR_WEB_GRAFO", "1")
+        configuracao_com = (await client.get("/api/config")).json()
+        grafo_com = await client.get(f"/api/history/{pesquisa.name}/graph")
+
+    assert configuracao["graph"] is False and grafo.status_code == 404
+    assert configuracao_com["graph"] is True and grafo_com.status_code == 200
+
+
+@pytest.mark.parametrize(("argumentos", "esperado"), [(["--web", "--host", "127.0.0.1"], "0"),
+                                                       (["--web", "--host", "127.0.0.1", "--graph"], "1")])
+def test_cli_graph_liga_o_grafo(monkeypatch: pytest.MonkeyPatch, argumentos, esperado) -> None:
+    import os
+    import sys as _sys
+
+    monkeypatch.setattr(cli, "load_dotenv", lambda *args, **kwargs: None)
+    monkeypatch.delenv("COLETOR_WEB_GRAFO", raising=False)
+    monkeypatch.setitem(_sys.modules, "uvicorn", SimpleNamespace(run=lambda app, **kwargs: None))
+    assert cli.main(argumentos) == 0
+    assert os.environ["COLETOR_WEB_GRAFO"] == esperado
+    monkeypatch.delenv("COLETOR_WEB_GRAFO", raising=False)

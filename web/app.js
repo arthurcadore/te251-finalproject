@@ -4,6 +4,7 @@
   const DEFAULTS_VERSION_KEY = "coletor-artigos-padroes";
   const TEMPERATURE_MIGRATION_KEY = "coletor-temperatura-0.1";
   const DEFAULT_TEMPERATURE = 0.1;
+  const DEFAULT_SEARCH_TIMEOUT = 300;
   const views = {
     nova: $("view-nova"),
     historico: $("view-historico"),
@@ -42,6 +43,7 @@
   let historyItems = [];
   let modelListError = "";
   let lastOllamaStatus = {};
+  let graphEnabled = false;
 
   const checkedValues = (id) => [...document.querySelectorAll(`#${id} input[type=checkbox]:checked`)].map((item) => item.value);
   const fillChecks = (id, values = []) => document.querySelectorAll(`#${id} input[type=checkbox]`).forEach((item) => { item.checked = values.includes(item.value); });
@@ -199,8 +201,15 @@
     $("query").value = config.query || "";
     fillChecks("bases", config.bases_ativas || []);
     $("max").value = config.max_artigos_por_base ?? 100;
+    $("timeout_pesquisa").value = config.execucao?.timeout_pesquisa_s ?? defaultConfig.execucao?.timeout_pesquisa_s ?? DEFAULT_SEARCH_TIMEOUT;
     $("criteria").value = data.criteria || "";
     preferredModel = data.model || "qwen3.5:0.8b";
+    // A lista de modelos pode ter chegado antes da configuração salva: aplica a escolha salva ao seletor.
+    const modelSelect = $("model");
+    if ([...modelSelect.options].some((option) => option.value === preferredModel)) {
+      modelSelect.value = preferredModel;
+      renderModelStatus();
+    }
     renderWeights(weightsFromData(data.weights));
     renderTypeValues(data.type_values || DEFAULT_TYPE_VALUES);
     renderTemperature(data.temperature ?? DEFAULT_TEMPERATURE);
@@ -217,6 +226,10 @@
         query: $("query").value.trim(),
         bases_ativas: checkedValues("bases"),
         max_artigos_por_base: Number.parseInt($("max").value, 10),
+        execucao: {
+          ...(hidden.execucao || {}),
+          timeout_pesquisa_s: clampInt($("timeout_pesquisa").value, 10, 7200, DEFAULT_SEARCH_TIMEOUT),
+        },
       },
       criteria: $("criteria").value,
       model: $("model").value.trim(),
@@ -884,7 +897,7 @@
       note.classList.toggle("warning-text", detail.ranking !== "completo");
       renderTopArticles();
       renderTiming(detail.timing || {});
-      loadGraph(detail.id);
+      if (graphEnabled) loadGraph(detail.id);
     } catch (error) {
       notify(error.message, true);
     }
@@ -936,6 +949,8 @@
     dot.className = "ollama-dot";
     const selected = $("model").value;
     const loaded = status.ollama_model;
+    $("model-heading").textContent = `Modelo ${selected || loaded || ""} selecionado`.replace("  ", " ");
+    $("model-heading").title = $("model-heading").textContent;
     if (status.ollama_status === "erro") {
       dot.classList.add("error");
       label.textContent = status.ollama_error || "Ollama indisponível";
@@ -952,6 +967,9 @@
         dot.classList.add("ready");
         label.textContent = `Pronto${accelerator}`;
       }
+    } else if (status.ollama_status === "carregando") {
+      dot.classList.add("loading");
+      label.textContent = `Carregando ${loaded || "modelo"}…`;
     } else {
       dot.classList.add("loading");
       label.textContent = "Iniciando Ollama…";
@@ -1020,6 +1038,13 @@
     fill.style.width = status.running && status.total ? `${Math.round((status.processed / status.total) * 100)}%` : "";
 
     const showResult = !status.running && stage === "concluído" && status.research_id && seenResult() !== status.research_id;
+    // Durante a execução o modelo não pode ser trocado: o seletor mostra o que está em uso.
+    const modelSelect = $("model");
+    const hasModels = [...modelSelect.options].some((option) => option.value);
+    modelSelect.disabled = Boolean(status.running) || !hasModels;
+    if (status.running && status.ollama_model && [...modelSelect.options].some((o) => o.value === status.ollama_model)) {
+      modelSelect.value = status.ollama_model;
+    }
     $("run").classList.toggle("hidden", Boolean(status.running || showResult));
     $("run").disabled = Boolean(status.running);
     $("run-busy").classList.toggle("hidden", !status.running);
@@ -1112,6 +1137,11 @@
   fetchJson("/api/config")
     .then((defaults) => {
       defaultConfig = defaults.config || {};
+      // Grafo só quando o servidor foi iniciado com --graph; sem ele, pizza e arquivos lado a lado.
+      graphEnabled = Boolean(defaults.graph);
+      $("graph-panel").classList.toggle("hidden", !graphEnabled);
+      $("research-top").classList.toggle("with-graph", graphEnabled);
+      if (graphEnabled && activeResearchId) loadGraph(activeResearchId);
       try {
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
         if (saved?.model === "qwen2.5:7b") saved.model = "qwen3.5:0.8b";
