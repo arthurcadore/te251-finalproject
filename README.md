@@ -135,7 +135,7 @@ A interface HTTP executa a busca e, em seguida, avalia cada linha do `consolidad
 ollama pull qwen3.5:0.8b
 ```
 
-Preencha `.env` com suas credenciais de APIs e um `COLETOR_WEB_TOKEN` aleatório com pelo menos 32 caracteres. Esse token protege a interface de outros computadores e será digitado na página de login (não aparece um popup do navegador). A sessão fica em cookie HttpOnly assinado, expira após 12 horas e pode ser encerrada pelo botão “Sair da sessão”. Inicie o servidor:
+Preencha `.env` com suas credenciais de APIs e um `COLETOR_WEB_TOKEN` aleatório com pelo menos 32 caracteres. Esse token protege a interface de outros computadores e será digitado na página de login (não aparece um popup do navegador). A sessão fica em cookie HttpOnly assinado, expira após 12 horas e pode ser encerrada pelo botão “Sair da sessão”. Ao sair, a sessão é invalidada no servidor e o navegador passa a exigir o token para entrar de novo, inclusive em acesso local (`localhost`); o mesmo `COLETOR_WEB_TOKEN` continua válido para novos logins. Inicie o servidor:
 
 ```bash
 python -m coletor --web --host 0.0.0.0
@@ -149,12 +149,18 @@ A aplicação Python não força CPU nem define `num_gpu`: a inferência é exec
 
 Cada execução cria uma nova pasta dentro de `./saida/`, contendo `config.yaml`, `criterios.txt` e os artefatos da coleta. Após a busca, `ranking.csv` é salvo na mesma pasta. A aba Histórico lista as pastas existentes e permite baixar os arquivos. O ranking mantém as 16 colunas do consolidado e acrescenta `llm_label` (`incluido`, `duvidoso` ou `excluido`), `llm_match` (1, 0,5 ou 0), `llm_justification`, `llm_score` e `llm_status`. O arquivo é ordenado por `llm_score` decrescente; falhas individuais ficam no fim, com `llm_status=erro`.
 
-O score final é `0,70 × aderência + 0,15 × recência + 0,15 × citações`. Ano e citações são normalizados entre os artigos do consolidado; citações passam antes por `log(1 + n_citacoes)`. Metadados ausentes recebem valor neutro 0,5. A resposta estruturada do modelo deve incluir uma citação literal do resumo, verificada antes de ser aceita. Um erro de conexão, modelo ou validação de citação não interrompe a triagem dos demais artigos.
+Por padrão, o score final é `0,70 × aderência + 0,10 × recência + 0,10 × citações por ano + 0,10 × tipo de publicação`; os pesos podem ser ajustados na interface (aderência mínima de 50%, demais até 50%, total de 100%). Citações por ano = `n_citacoes ÷ (ano atual − ano + 1)`, para não favorecer artigos antigos só por terem tido mais tempo de acumular citações; passam por `log(1 + x)` e min-max entre os artigos do consolidado. O tipo de publicação vale, por padrão: artigo 100, revisão 100, conferência 80, livro/capítulo 60, preprint 50 e outros 40 (de 0 a 100, editáveis na interface). A temperatura do modelo também é ajustável (0 a 1; padrão 0,1: pouca variação, mas sem respostas totalmente fixas; use 0 para resultados reprodutíveis). Recência é normalizada entre os artigos do consolidado. Metadados ausentes (ano, citações ou tipo) recebem valor neutro 0,5. A resposta estruturada do modelo deve incluir uma citação literal do resumo, verificada antes de ser aceita. Um erro de conexão, modelo ou validação de citação não interrompe a triagem dos demais artigos.
 
 Também é possível ranquear um CSV já existente sem iniciar uma nova busca:
 
 ```bash
 python model/llm_pipeline.py saida/<execucao>/consolidado.csv --criteria "Critérios de inclusão e exclusão..."
 ```
+
+Durante a execução, a barra ao lado do título mostra a etapa (busca, classificação com contagem de artigos) e o botão vira "Gerando…", com a opção de cancelar; ao cancelar, o que já foi coletado ou classificado fica no histórico. Ao terminar, o botão fica verde com "Ver resultado".
+
+No histórico, cada pesquisa mostra o tempo de busca, o tempo de processamento (triagem LLM) e o total no canto superior direito (registrados em `tempos.json`), e um grafo que liga os artigos mais bem ranqueados às referências que compartilham. O grafo aceita zoom (roda do mouse) e arraste; passar o mouse mostra os detalhes e clicar abre o DOI.
+
+A interface vem com a consulta `SAR AND Agricultura` e critérios de triagem para SAR aplicado à agricultura como padrão, e tem tema claro e escuro (botão na barra lateral). Se uma execução for interrompida antes do fim do ranking, o histórico avisa e mostra o resultado parcial ou o consolidado sem justificativa.
 
 Os arquivos da interface (HTML, CSS e JavaScript) ficam em `web/`. Os testes do ranking e da interface são offline; eles não iniciam o Ollama nem consultam bases acadêmicas.

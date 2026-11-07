@@ -30,7 +30,7 @@ def compute_score(
     citacoes_min: float | None,
     citacoes_max: float | None,
 ) -> float:
-    """Combina match da LLM, ano e citações (citações com normalização logarítmica)."""
+    """Combina match da LLM, ano e citações por ano (normalização logarítmica); tipo ausente = neutro."""
     return _compute_score(match, year, n_citacoes, year_min, year_max, citacoes_min, citacoes_max)
 
 

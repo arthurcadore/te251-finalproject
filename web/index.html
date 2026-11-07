@@ -6,10 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f4f7fc">
   <title>Coletor de artigos científicos</title>
-  <link rel="stylesheet" href="/assets/styles.css?v=7">
-  <link rel="stylesheet" href="/assets/forms.css?v=7">
-  <link rel="stylesheet" href="/assets/model.css?v=7">
-  <link rel="stylesheet" href="/assets/session.css?v=7">
+  <script src="/assets/theme.js?v=11"></script>
+  <link rel="stylesheet" href="/assets/theme.css?v=11">
+  <link rel="stylesheet" href="/assets/styles.css?v=11">
+  <link rel="stylesheet" href="/assets/forms.css?v=11">
+  <link rel="stylesheet" href="/assets/model.css?v=11">
+  <link rel="stylesheet" href="/assets/session.css?v=11">
 </head>
 
 <body>
@@ -19,7 +21,6 @@
         <span class="brand-mark">C</span>
         <span><strong>Coletor</strong><small>Pesquisa Acadêmica</small></span>
       </a>
-      <div class="nav-caption">ESPAÇO DE TRABALHO</div>
       <nav class="side-nav" aria-label="Navegação principal">
         <button class="nav-item active" data-view="nova"><span class="nav-icon">＋</span><span>Nova
             Pesquisa</span></button>
@@ -40,69 +41,64 @@
             <span class="panel-icon green" aria-hidden="true">◉</span>
             <div class="model-title">
               <h2>Modelo de Triagem</h2>
-              <p>Modelos Ollama instalados.</p>
             </div>
             <button class="button button-soft model-refresh" id="refresh-models" type="button" title="Atualizar modelos"
               aria-label="Atualizar modelos">↻</button>
           </div>
           <div class="model-controls">
-            <div class="field model-select-field"><label for="model">Modelo Disponível</label><select id="model"
+            <div class="field model-select-field"><label for="model">Modelo Selecionado</label><select id="model"
                 disabled>
                 <option value="">Carregando modelos Ollama…</option>
-              </select><small id="models-hint">A lista vem diretamente do Ollama.</small></div>
-            <div class="accelerator-chip"><span class="accelerator-dot"></span>
-              <div><strong>Aceleração</strong><small id="gpu-status">Ollama informa uso de CPU/GPU após carregar o
-                  modelo.</small></div>
-            </div>
+              </select></div>
+            <div class="model-status" aria-live="polite"><span class="ollama-dot" id="ollama-dot"></span>
+              <span id="ollama-label">Verificando Ollama…</span></div>
           </div>
         </section>
-        <div class="local-indicator"><span></span>
-          <div><strong>Execução no Servidor</strong><small>Dados neste servidor</small></div>
-        </div>
-        <div class="ollama-small"><span class="ollama-dot" id="ollama-dot"></span><span id="ollama-label">Ollama
-            verificando…</span></div>
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Alternar tema claro/escuro">
+          <span class="theme-toggle-icon" aria-hidden="true">☾</span><span class="theme-toggle-label">Tema
+            escuro</span></button>
         <button class="logout-button" id="logout" type="button">Sair da sessão</button>
       </div>
     </aside>
 
     <main class="main-area">
       <div class="toolbar">
-        <div class="toolbar-context"><span class="eyebrow" id="page-eyebrow">NOVA EXECUÇÃO</span>
+        <div class="toolbar-context">
           <h1 id="page-title">Nova Pesquisa</h1>
         </div>
+        <div class="toolbar-actions timing-actions hidden" id="history-actions" aria-label="Tempos da pesquisa">
+          <div class="timing-chip"><small>Tempo de busca</small><strong id="timing-busca">—</strong></div>
+          <div class="timing-chip"><small>Tempo de processamento</small><strong id="timing-processamento">—</strong></div>
+          <div class="timing-chip timing-total"><small>Total</small><strong id="timing-total">—</strong></div>
+        </div>
         <div class="toolbar-actions" id="new-actions">
-          <div class="run-state" aria-live="polite">
+          <div class="status-bar" id="status-bar" aria-live="polite">
             <span class="state-dot" id="state-dot"></span>
-            <div><strong id="stage">Pronto para configurar</strong><small id="state-detail">Ollama: verificando…</small>
-            </div>
+            <strong id="stage">Pronto para configurar</strong>
+            <span class="status-detail" id="status-detail"></span>
+            <span class="status-count" id="status-count"></span>
+            <span class="status-progress" aria-hidden="true"><i id="status-fill"></i></span>
           </div>
           <button class="button button-soft" id="save">Salvar Configuração</button>
-          <button class="button button-primary" id="run"><span class="button-icon">▶</span> Buscar e gerar
-            Ranking</button>
+          <div class="run-group">
+            <button class="button button-primary" id="run"><span class="button-icon">▶</span> Buscar e gerar
+              Ranking</button>
+            <button class="button button-primary run-busy hidden" id="run-busy" type="button" disabled
+              aria-live="polite"><span class="spinner" aria-hidden="true"></span> Gerando…</button>
+            <button class="button run-cancel hidden" id="cancel" type="button" title="Cancelar a execução"
+              aria-label="Cancelar a execução">✕ Cancelar</button>
+            <button class="button run-done hidden" id="view-result" type="button"><span
+                aria-hidden="true">✓</span> Ver resultado</button>
+          </div>
         </div>
       </div>
 
       <section id="view-nova" class="view active">
-        <div class="result-banner hidden" id="result-banner">
-          <div><strong id="result-title">Pesquisa concluída</strong>
-            <p id="result-message">Os arquivos desta execução estão no histórico.</p>
-          </div>
-          <button class="button button-soft button-small" id="open-history">Ver Resultado <span
-              aria-hidden="true">→</span></button>
-        </div>
-        <div class="progress-card hidden" id="progress-card">
-          <div class="progress-head"><strong id="progress-stage">Preparando execução</strong><span
-              id="progress-number"></span></div>
-          <div class="progress-track"><i id="progress-fill"></i></div>
-          <p id="progress-detail">Preparando serviços locais…</p>
-        </div>
-
         <div class="form-grid">
           <div class="left-stack">
             <section class="panel search-panel">
               <div class="panel-heading search-heading">
                 <div class="panel-heading-main">
-                  <div class="panel-icon blue">⌕</div>
                   <div>
                     <h2>Parâmetros de Busca</h2>
                     <p>Defina a consulta e as bases acadêmicas.</p>
@@ -113,8 +109,8 @@
                   <input id="max" type="number" min="1" value="100">
                 </div>
               </div>
-              <div class="field"><label for="query">Consulta: <span class="required">*</span></label><input id="query"
-                  type="text" placeholder='Ex.: "solar sail" AND asteroid'><small>Use AND, OR e parênteses
+              <div class="field"><input id="query" aria-label="Consulta"
+                  type="text" placeholder='Ex.: SAR AND Agricultura'><small>Use AND, OR e parênteses
                   para combinar os termos.</small></div>
               <div class="field"><span class="field-label">Bases de busca:</span>
                 <div class="check-grid" id="bases">
@@ -130,16 +126,14 @@
                       PMC</span></label>
                   <label class="check-card"><input type="checkbox" value="core" checked><span>CORE</span></label>
                   <label class="check-card"><input type="checkbox" value="doaj" checked><span>DOAJ</span></label>
-                </div><small>SciELO está desabilitada no coletor.</small>
+                </div>
               </div>
             </section>
             <section class="panel ranking-panel">
               <div class="panel-heading">
-                <div class="panel-icon indigo">↗</div>
                 <div>
-                  <h2>Como funciona o Ranking</h2>
-                  <p>Score final de 0 a 1 combinando as três dimensões normalizadas. Dados ausentes recebem valor neutro
-                    0,5.</p>
+                  <h2>Critérios de Ranking</h2>
+                  <p>Score final de 0 a 1 combinando os critérios abaixo, já normalizados. Dados ausentes recebem valor neutro 0,5.</p>
                 </div>
               </div>
               <div class="weights-grid">
@@ -155,17 +149,51 @@
                   <div class="weight-head">
                     <label for="peso_ano">Ano de Publicação <small>(Recência)</small></label>
                     <div class="weight-value"><input id="peso_ano_num" type="number" min="0" max="50" step="1"
-                        value="15" aria-label="Peso da recência em porcentagem"><span>%</span></div>
+                        value="10" aria-label="Peso da recência em porcentagem"><span>%</span></div>
                   </div>
-                  <input id="peso_ano" type="range" min="0" max="50" step="1" value="15">
+                  <input id="peso_ano" type="range" min="0" max="50" step="1" value="10">
                 </div>
                 <div class="weight-item">
                   <div class="weight-head">
-                    <label for="peso_citacoes">Citações <small>(Escala Logarítmica)</small></label>
+                    <label for="peso_citacoes">Citações por ano <small>(Escala Logarítmica)</small></label>
                     <div class="weight-value"><input id="peso_citacoes_num" type="number" min="0" max="50" step="1"
-                        value="15" aria-label="Peso das citações em porcentagem"><span>%</span></div>
+                        value="10" aria-label="Peso das citações por ano em porcentagem"><span>%</span></div>
                   </div>
-                  <input id="peso_citacoes" type="range" min="0" max="50" step="1" value="15">
+                  <input id="peso_citacoes" type="range" min="0" max="50" step="1" value="10">
+                </div>
+                <div class="weight-item">
+                  <div class="weight-head">
+                    <label for="peso_tipo">Tipo de publicação <small>(Valor por tipo abaixo)</small></label>
+                    <div class="weight-value"><input id="peso_tipo_num" type="number" min="0" max="50" step="1"
+                        value="10" aria-label="Peso do tipo de publicação em porcentagem"><span>%</span></div>
+                  </div>
+                  <input id="peso_tipo" type="range" min="0" max="50" step="1" value="10">
+                </div>
+              <div class="weight-item temperature-item">
+                <div class="weight-head">
+                  <label for="temperatura">Temperatura do modelo <small>(padrão 0,1; 0 = determinístico)</small></label>
+                  <div class="weight-value"><input id="temperatura_num" type="number" min="0" max="1" step="0.05"
+                      value="0.1" aria-label="Temperatura do modelo"></div>
+                </div>
+                <input id="temperatura" type="range" min="0" max="1" step="0.05" value="0.1">
+              </div>
+              </div>
+              <div class="type-values">
+                <span class="field-label">Valor de cada tipo de publicação (0 a 100):</span>
+                <div class="check-grid" id="type-values">
+                  <label class="check-card type-card"><span>Artigo</span><input type="number" min="0" max="100" step="1"
+                      data-tipo="artigo" value="100" aria-label="Valor do tipo artigo"></label>
+                  <label class="check-card type-card"><span>Revisão</span><input type="number" min="0" max="100" step="1"
+                      data-tipo="revisao" value="100" aria-label="Valor do tipo revisão"></label>
+                  <label class="check-card type-card"><span>Conferência</span><input type="number" min="0" max="100"
+                      step="1" data-tipo="conferencia" value="80" aria-label="Valor do tipo conferência"></label>
+                  <label class="check-card type-card"><span>Livro/capítulo</span><input type="number" min="0" max="100"
+                      step="1" data-tipo="livro_capitulo" value="60" aria-label="Valor do tipo livro ou capítulo"></label>
+                  <label class="check-card type-card"><span>Preprint</span><input type="number" min="0" max="100"
+                      step="1" data-tipo="preprint" value="50" aria-label="Valor do tipo preprint"></label>
+                  <label class="check-card type-card" title="Tipos fora da lista (ex.: dissertação, texto)"><span>Outros</span><input
+                      type="number" min="0" max="100" step="1" data-tipo="outros" value="40"
+                      aria-label="Valor dos demais tipos"></label>
                 </div>
               </div>
             </section>
@@ -173,14 +201,12 @@
 
           <section class="panel criteria-panel">
             <div class="panel-heading">
-              <div class="panel-icon violet">✳</div>
               <div>
                 <h2>Critérios de Triagem</h2>
                 <p>Oriente o modelo para classificar os artigos.</p>
               </div>
             </div>
-            <div class="field criteria-field"><label for="criteria">Critérios para o modelo: <span
-                  class="required">*</span></label><textarea id="criteria" rows="22"
+            <div class="field criteria-field"><textarea id="criteria" aria-label="Critérios de triagem para o modelo" rows="22"
                 placeholder="Descreva os critérios de inclusão, exclusão e como tratar casos duvidosos.
 Ex.: 
 SCREENING CRITERIA
@@ -199,12 +225,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse at ipsum bl
 
 3.DOUBTFUL CASES:
 3.1. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse at ipsum blandit ante laoreet venenatis.
-3.2. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse at ipsum blandit ante laoreet venenatis."></textarea><small>Estes critérios serão salvos em criterios.txt dentro
-                da pasta desta pesquisa.</small></div>
-            <div class="privacy-note"><span>●</span>
-              <p>A triagem roda localmente. A justificativa do modelo precisa citar literalmente o resumo; o sistema
-                valida essa evidência.</p>
-            </div>
+3.2. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse at ipsum blandit ante laoreet venenatis."></textarea></div>
           </section>
         </div>
       </section>
@@ -212,9 +233,9 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse at ipsum bl
       <section id="view-historico" class="view">
         <div class="research-dashboard" id="research-dashboard">
           <div class="research-top">
+            <div class="research-left">
             <section class="panel pie-panel">
               <div class="panel-heading compact-heading">
-                <div class="panel-icon blue">◔</div>
                 <div>
                   <h2>Artigos encontrados por base: </h2>
                   <p id="pie-subtitle">Distribuição entre as bases acadêmicas consultadas.</p>
@@ -235,7 +256,6 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse at ipsum bl
 
             <section class="panel files-panel">
               <div class="panel-heading compact-heading">
-                <div class="panel-icon indigo">▤</div>
                 <div>
                   <h2>Arquivos da pesquisa: </h2>
                   <p id="files-subtitle">Gerados em ./saida/ para download direto.</p>
@@ -243,11 +263,39 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse at ipsum bl
               </div>
               <div id="research-files" class="file-grid compact-file-grid"></div>
             </section>
+            </div>
+
+            <section class="panel graph-panel">
+              <div class="panel-heading compact-heading">
+                <div>
+                  <h2>Grafo de artigos e referências:</h2>
+                  <p id="graph-subtitle">Artigos ligados às referências que compartilham.</p>
+                </div>
+                <div class="graph-tools">
+                  <button class="button button-soft graph-btn" id="graph-zoom-in" type="button" title="Aproximar"
+                    aria-label="Aproximar">＋</button>
+                  <button class="button button-soft graph-btn" id="graph-zoom-out" type="button" title="Afastar"
+                    aria-label="Afastar">－</button>
+                  <button class="button button-soft graph-btn" id="graph-reset" type="button"
+                    title="Reorganizar e centralizar" aria-label="Reorganizar e centralizar">⟲</button>
+                </div>
+              </div>
+              <div class="graph-wrap">
+                <svg id="graph-svg" class="graph-svg" viewBox="0 0 600 420" role="img"
+                  aria-label="Grafo de artigos e referências compartilhadas"></svg>
+                <div class="graph-empty hidden" id="graph-empty">Nenhum artigo desta pesquisa tem referências
+                  compartilhadas para montar o grafo.</div>
+                <div class="graph-tooltip hidden" id="graph-tooltip" role="tooltip"></div>
+              </div>
+              <div class="graph-legend">
+                <span><i class="graph-dot artigo"></i>Artigo da pesquisa (cor = score; azul = sem score)</span>
+                <span><i class="graph-dot referencia"></i>Referência citada por 2+ artigos (tamanho = nº de citações)</span>
+              </div>
+            </section>
           </div>
 
           <section class="panel top-articles-panel" id="top-articles-panel">
             <div class="panel-heading compact-heading">
-              <div class="panel-icon violet">★</div>
               <div>
                 <h2>Principais artigos por aderência:</h2>
                 <p id="articles-subtitle">Ordenados do maior para o menor score. Clique em um artigo para expandir.</p>
@@ -267,11 +315,9 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse at ipsum bl
           </section>
         </div>
       </section>
-      <footer class="page-footer"><span>Coletor multibase de artigos científicos</span><span>Acesso remoto autenticado ·
-          Credenciais lidas de .env</span></footer>
     </main>
   </div>
-  <script src="/assets/app.js?v=7" defer></script>
+  <script src="/assets/app.js?v=11" defer></script>
 </body>
 
 </html>

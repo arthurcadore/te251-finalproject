@@ -1,6 +1,9 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const STORAGE_KEY = "coletor-artigos-form";
+  const DEFAULTS_VERSION_KEY = "coletor-artigos-padroes";
+  const TEMPERATURE_MIGRATION_KEY = "coletor-temperatura-0.1";
+  const DEFAULT_TEMPERATURE = 0.1;
   const views = {
     nova: $("view-nova"),
     historico: $("view-historico"),
@@ -37,6 +40,8 @@
   let activeResearchId = null;
   let currentResearchData = null;
   let historyItems = [];
+  let modelListError = "";
+  let lastOllamaStatus = {};
 
   const checkedValues = (id) => [...document.querySelectorAll(`#${id} input[type=checkbox]:checked`)].map((item) => item.value);
   const fillChecks = (id, values = []) => document.querySelectorAll(`#${id} input[type=checkbox]`).forEach((item) => { item.checked = values.includes(item.value); });
@@ -87,14 +92,12 @@
     });
     const isNew = viewName === "nova";
     $("new-actions").classList.toggle("hidden", !isNew);
+    $("history-actions").classList.toggle("hidden", isNew);
     if (isNew) {
       activeResearchId = null;
-      $("page-eyebrow").textContent = "NOVA EXECUÇÃO";
       $("page-title").textContent = "Nova Pesquisa";
     } else {
-      const kw = options.keywords || "Pesquisa";
-      $("page-eyebrow").textContent = `ARQUIVOS E RESULTADOS`;
-      $("page-title").textContent = kw;
+      $("page-title").textContent = options.keywords || "Pesquisa";
     }
     highlightActiveHistoryItem();
   }
@@ -104,37 +107,91 @@
     return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
   };
 
-  function renderWeights(aderencia, ano, citacoes) {
-    $("peso_aderencia").value = aderencia;
-    $("peso_aderencia_num").value = aderencia;
-    $("peso_ano").value = ano;
-    $("peso_ano_num").value = ano;
-    $("peso_citacoes").value = citacoes;
-    $("peso_citacoes_num").value = citacoes;
+  // Pesos do score (em %): aderência entre 50 e 100; demais entre 0 e 50; total sempre 100.
+  const WEIGHT_KEYS = ["aderencia", "ano", "citacoes", "tipo"];
+  const OTHER_KEYS = WEIGHT_KEYS.slice(1);
+  const DEFAULT_WEIGHTS = { aderencia: 70, ano: 10, citacoes: 10, tipo: 10 };
+  const DEFAULT_TYPE_VALUES = { artigo: 100, revisao: 100, conferencia: 80, livro_capitulo: 60, preprint: 50, outros: 40 };
+
+  function renderWeights(weights) {
+    for (const key of WEIGHT_KEYS) {
+      $(`peso_${key}`).value = weights[key];
+      $(`peso_${key}_num`).value = weights[key];
+    }
+  }
+
+  function currentWeights() {
+    const w = { aderencia: clampInt($("peso_aderencia").value, 50, 100, DEFAULT_WEIGHTS.aderencia) };
+    for (const key of OTHER_KEYS) w[key] = clampInt($(`peso_${key}`).value, 0, 50, DEFAULT_WEIGHTS[key]);
+    return w;
   }
 
   function rebalanceWeights(changed, rawValue) {
-    let a = clampInt($("peso_aderencia").value, 50, 100, 70);
-    let r = clampInt($("peso_ano").value, 0, 50, 15);
-    let c = clampInt($("peso_citacoes").value, 0, 50, 15);
+    const w = currentWeights();
     if (changed === "aderencia") {
-      a = clampInt(rawValue, 50, 100, a);
-      const rem = 100 - a;
-      const sumRC = r + c;
-      r = sumRC > 0 ? Math.round((rem * r) / sumRC) : Math.round(rem / 2);
-      c = rem - r;
-    } else if (changed === "ano") {
-      r = clampInt(rawValue, 0, 50, r);
-      c = Math.min(100 - a - r, c);
-      if (c < 0) c = 0;
-      a = 100 - r - c;
-    } else if (changed === "citacoes") {
-      c = clampInt(rawValue, 0, 50, c);
-      r = Math.min(100 - a - c, r);
-      if (r < 0) r = 0;
-      a = 100 - r - c;
+      // A sobra é dividida entre os demais pesos, na proporção atual deles.
+      w.aderencia = clampInt(rawValue, 50, 100, w.aderencia);
+      const rem = 100 - w.aderencia;
+      const sum = OTHER_KEYS.reduce((acc, k) => acc + w[k], 0);
+      let used = 0;
+      OTHER_KEYS.forEach((k, i) => {
+        if (i === OTHER_KEYS.length - 1) { w[k] = rem - used; return; }
+        w[k] = sum > 0 ? Math.round((rem * w[k]) / sum) : Math.floor(rem / OTHER_KEYS.length);
+        used += w[k];
+      });
+    } else {
+      // Mudar um peso secundário ajusta a aderência; se ela ficaria abaixo de 50%, o valor é limitado.
+      const others = OTHER_KEYS.filter((k) => k !== changed).reduce((acc, k) => acc + w[k], 0);
+      w[changed] = Math.min(clampInt(rawValue, 0, 50, w[changed]), 50 - others);
+      if (w[changed] < 0) w[changed] = 0;
+      w.aderencia = 100 - others - w[changed];
     }
-    renderWeights(a, r, c);
+    renderWeights(w);
+  }
+
+  function weightsFromData(raw) {
+    const w = raw || {};
+    if (w.tipo === undefined || w.aderencia === undefined) return { ...DEFAULT_WEIGHTS };
+    const fraction = WEIGHT_KEYS.every((k) => Number(w[k]) <= 1);
+    const pct = (k) => {
+      const n = Number(w[k]);
+      return Number.isFinite(n) ? Math.round(fraction ? n * 100 : n) : DEFAULT_WEIGHTS[k];
+    };
+    const result = { aderencia: clampInt(pct("aderencia"), 50, 100, DEFAULT_WEIGHTS.aderencia) };
+    for (const k of OTHER_KEYS) result[k] = clampInt(pct(k), 0, 50, DEFAULT_WEIGHTS[k]);
+    const total = WEIGHT_KEYS.reduce((acc, k) => acc + result[k], 0);
+    return total === 100 ? result : { ...DEFAULT_WEIGHTS };
+  }
+
+  function typeValueInputs() {
+    return [...document.querySelectorAll("#type-values input[data-tipo]")];
+  }
+
+  function renderTypeValues(values) {
+    const v = values || {};
+    for (const input of typeValueInputs()) {
+      const n = Number(v[input.dataset.tipo]);
+      const fallback = DEFAULT_TYPE_VALUES[input.dataset.tipo];
+      input.value = String(Number.isFinite(n) ? clampInt(Math.round(n <= 1 && v.artigo <= 1 ? n * 100 : n), 0, 100, fallback) : fallback);
+    }
+  }
+
+  function currentTypeValues() {
+    const values = {};
+    for (const input of typeValueInputs()) {
+      const n = clampInt(input.value, 0, 100, DEFAULT_TYPE_VALUES[input.dataset.tipo]);
+      input.value = String(n);
+      values[input.dataset.tipo] = n;
+    }
+    return values;
+  }
+
+  function renderTemperature(value) {
+    const n = Number(value);
+    const t = Number.isFinite(n) ? Math.min(1, Math.max(0, Math.round(n * 100) / 100)) : DEFAULT_TEMPERATURE;
+    $("temperatura").value = String(t);
+    $("temperatura_num").value = String(t);
+    return t;
   }
 
   function populate(data) {
@@ -144,25 +201,16 @@
     $("max").value = config.max_artigos_por_base ?? 100;
     $("criteria").value = data.criteria || "";
     preferredModel = data.model || "qwen3.5:0.8b";
-    const w = data.weights || {};
-    const toPct = (v, fb) => {
-      const n = Number(v);
-      if (!Number.isFinite(n)) return fb;
-      return Math.round(n <= 1 && (w.aderencia ?? 70) <= 1 ? n * 100 : n);
-    };
-    const a = clampInt(toPct(w.aderencia, 70), 50, 100, 70);
-    const r = clampInt(toPct(w.ano, 15), 0, 100 - a, 15);
-    const c = 100 - a - r;
-    renderWeights(a, r, c);
+    renderWeights(weightsFromData(data.weights));
+    renderTypeValues(data.type_values || DEFAULT_TYPE_VALUES);
+    renderTemperature(data.temperature ?? DEFAULT_TEMPERATURE);
   }
 
   function makePayload() {
     // Filtros, enriquecimento, saída, execução e limites não são editáveis na interface:
     // seguem sempre os valores padrão do servidor (/api/config).
     const hidden = structuredClone(defaultConfig);
-    const aderencia = clampInt($("peso_aderencia").value, 50, 100, 70);
-    const ano = clampInt($("peso_ano").value, 0, 100 - aderencia, 15);
-    const citacoes = 100 - aderencia - ano;
+    const w = currentWeights();
     return {
       config: {
         ...hidden,
@@ -172,11 +220,9 @@
       },
       criteria: $("criteria").value,
       model: $("model").value.trim(),
-      weights: {
-        aderencia: Number((aderencia / 100).toFixed(4)),
-        ano: Number((ano / 100).toFixed(4)),
-        citacoes: Number((citacoes / 100).toFixed(4)),
-      },
+      weights: Object.fromEntries(WEIGHT_KEYS.map((key) => [key, Number((w[key] / 100).toFixed(4))])),
+      type_values: Object.fromEntries(Object.entries(currentTypeValues()).map(([key, n]) => [key, Number((n / 100).toFixed(4))])),
+      temperature: renderTemperature($("temperatura").value),
     };
   }
 
@@ -213,7 +259,8 @@
         placeholder.textContent = "Nenhum modelo disponível";
         select.append(placeholder);
         select.disabled = true;
-        $("models-hint").textContent = result.error || "Baixe um modelo no servidor Ollama e atualize a lista.";
+        modelListError = result.error || "Nenhum modelo instalado no Ollama.";
+        renderModelStatus();
         return;
       }
 
@@ -231,9 +278,11 @@
       select.value = selected;
       select.disabled = false;
       preferredModel = selected;
-      $("models-hint").textContent = `${models.length} modelo(s) instalado(s). O selecionado será carregado ao iniciar a pesquisa.`;
+      modelListError = "";
+      renderModelStatus();
     } catch (error) {
-      $("models-hint").textContent = error.message;
+      modelListError = error.message;
+      renderModelStatus();
     } finally {
       button.disabled = false;
       modelRefreshInProgress = false;
@@ -243,6 +292,12 @@
   function fileIcon(filename) {
     const ext = filename.split(".").pop().toLowerCase();
     return ({ csv: "CSV", yaml: "YML", txt: "TXT", md: "MD", json: "{}", log: "LOG" })[ext] || "FILE";
+  }
+
+  function syncThemeButton() {
+    const dark = window.coletorTheme.current() === "dark";
+    document.querySelector(".theme-toggle-icon").textContent = dark ? "☀" : "☾";
+    document.querySelector(".theme-toggle-label").textContent = dark ? "Tema claro" : "Tema escuro";
   }
 
   function renderFileLinks(container, researchId, files) {
@@ -323,7 +378,7 @@
     bgCircle.setAttribute("cy", String(cy));
     bgCircle.setAttribute("r", String(r));
     bgCircle.setAttribute("fill", "none");
-    bgCircle.setAttribute("stroke", "#edf1f7");
+    bgCircle.style.stroke = "var(--pie-track)";
     bgCircle.setAttribute("stroke-width", "32");
     svg.append(bgCircle);
 
@@ -366,7 +421,7 @@
     for (const item of allBases) {
       const count = Number(item.count) || 0;
       const hasArticles = count > 0;
-      const color = hasArticles ? PIE_COLORS[colorIndex++ % PIE_COLORS.length] : "#cbd5e1";
+      const color = hasArticles ? PIE_COLORS[colorIndex++ % PIE_COLORS.length] : "var(--pie-empty)";
       const pct = total > 0 && hasArticles ? `${Math.round((count / total) * 100)}%` : "0%";
       const li = document.createElement("li");
       li.className = "pie-legend-item";
@@ -460,7 +515,8 @@
     justCell.title = "Clique para expandir ou recolher a justificativa completa";
     const justText = document.createElement("p");
     justText.className = "article-justification-text";
-    justText.textContent = article.llm_justification || "—";
+    justText.textContent = article.llm_justification
+      || (currentResearchData?.ranking === "ausente" ? "Sem triagem: o ranking não foi gerado nesta pesquisa." : "—");
     justCell.append(justText);
     justCell.addEventListener("click", toggleExpand);
 
@@ -525,6 +581,287 @@
     window.requestAnimationFrame(() => syncArticlesViewportHeight());
   }
 
+  function formatDuration(seconds) {
+    const n = Number(seconds);
+    if (seconds === null || seconds === undefined || !Number.isFinite(n)) return "—";
+    const total = Math.round(n);
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const sec = total % 60;
+    if (h) return `${h}h ${String(m).padStart(2, "0")}min`;
+    if (m) return `${m}min ${String(sec).padStart(2, "0")}s`;
+    return `${sec}s`;
+  }
+
+  function renderTiming(timing) {
+    const busca = timing.busca_s;
+    const proc = timing.processamento_s;
+    const known = (v) => v !== null && v !== undefined && Number.isFinite(Number(v));
+    $("timing-busca").textContent = formatDuration(busca);
+    $("timing-processamento").textContent = formatDuration(proc);
+    $("timing-total").textContent = known(busca) || known(proc)
+      ? formatDuration((known(busca) ? Number(busca) : 0) + (known(proc) ? Number(proc) : 0))
+      : "—";
+    $("timing-processamento").title = known(proc)
+      ? ""
+      : "Não registrado: triagem não concluída ou pesquisa anterior ao registro de tempos.";
+  }
+
+  // ---------- Grafo de artigos e referências (layout por forças, sem bibliotecas externas) ----------
+  const GRAPH_W = 600;
+  const GRAPH_H = 420;
+  const graphState = { nodes: [], edges: [], view: { x: 0, y: 0, w: GRAPH_W, h: GRAPH_H }, requestId: 0 };
+
+  async function loadGraph(researchId) {
+    const requestId = ++graphState.requestId;
+    $("graph-svg").replaceChildren();
+    $("graph-empty").classList.add("hidden");
+    $("graph-subtitle").textContent = "Montando o grafo…";
+    try {
+      const data = await fetchJson(`/api/history/${encodeURIComponent(researchId)}/graph`, { cache: "no-store" });
+      if (requestId !== graphState.requestId) return;
+      renderGraph(data);
+    } catch (error) {
+      if (requestId !== graphState.requestId) return;
+      $("graph-subtitle").textContent = error.message;
+    }
+  }
+
+  function layoutGraph(nodes, edges, width, height) {
+    const byId = new Map(nodes.map((n) => [n.id, n]));
+    const links = edges.map((e) => [byId.get(e.source), byId.get(e.target)]).filter(([a, b]) => a && b);
+    nodes.forEach((n, i) => {
+      const angle = (i / Math.max(1, nodes.length)) * Math.PI * 2;
+      const radius = n.type === "artigo" ? width * 0.18 : width * 0.36;
+      n.x = width / 2 + Math.cos(angle) * radius + (Math.random() - 0.5) * 10;
+      n.y = height / 2 + Math.sin(angle) * radius * 0.75 + (Math.random() - 0.5) * 10;
+      n.vx = 0;
+      n.vy = 0;
+    });
+    const k = Math.sqrt((width * height) / Math.max(1, nodes.length)) * 0.55;
+    const steps = 320;
+    for (let iter = 0; iter < steps; iter += 1) {
+      const cooling = 1 - iter / steps;
+      for (let i = 0; i < nodes.length; i += 1) {
+        const a = nodes[i];
+        for (let j = i + 1; j < nodes.length; j += 1) {
+          const b = nodes[j];
+          let dx = a.x - b.x;
+          let dy = a.y - b.y;
+          let d2 = dx * dx + dy * dy;
+          if (d2 < 0.01) { dx = Math.random() - 0.5; dy = Math.random() - 0.5; d2 = 0.25; }
+          const force = ((k * k) / d2) * 0.02;
+          a.vx += dx * force; a.vy += dy * force;
+          b.vx -= dx * force; b.vy -= dy * force;
+        }
+      }
+      for (const [a, b] of links) {
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
+        const force = (d - k) * 0.04;
+        const fx = (dx / d) * force;
+        const fy = (dy / d) * force;
+        a.vx += fx; a.vy += fy; b.vx -= fx; b.vy -= fy;
+      }
+      for (const n of nodes) {
+        n.vx += (width / 2 - n.x) * 0.02;
+        n.vy += (height / 2 - n.y) * 0.02;
+        const speed = Math.sqrt(n.vx * n.vx + n.vy * n.vy);
+        const limit = 18 * cooling + 0.5;
+        if (speed > limit) { n.vx = (n.vx / speed) * limit; n.vy = (n.vy / speed) * limit; }
+        n.x += n.vx;
+        n.y += n.vy;
+        n.vx *= 0.6;
+        n.vy *= 0.6;
+      }
+    }
+    return links;
+  }
+
+  function applyGraphView() {
+    const v = graphState.view;
+    $("graph-svg").setAttribute("viewBox", `${v.x} ${v.y} ${v.w} ${v.h}`);
+  }
+
+  function fitGraphView() {
+    const { nodes } = graphState;
+    if (!nodes.length) return;
+    const xs = nodes.map((n) => n.x);
+    const ys = nodes.map((n) => n.y);
+    const pad = 24;
+    const minX = Math.min(...xs) - pad;
+    const maxX = Math.max(...xs) + pad;
+    const minY = Math.min(...ys) - pad;
+    const maxY = Math.max(...ys) + pad;
+    const box = $("graph-svg").getBoundingClientRect();
+    const ratio = box.width > 0 && box.height > 0 ? box.width / box.height : GRAPH_W / GRAPH_H;
+    let w = maxX - minX;
+    let h = maxY - minY;
+    if (w / h > ratio) h = w / ratio; else w = h * ratio;
+    graphState.view = { x: (minX + maxX - w) / 2, y: (minY + maxY - h) / 2, w, h };
+    applyGraphView();
+  }
+
+  function zoomGraph(factor, cx, cy) {
+    const v = graphState.view;
+    const px = cx ?? v.x + v.w / 2;
+    const py = cy ?? v.y + v.h / 2;
+    const w = Math.min(4000, Math.max(80, v.w * factor));
+    const h = w * (v.h / v.w);
+    graphState.view = { x: px - ((px - v.x) * w) / v.w, y: py - ((py - v.y) * h) / v.h, w, h };
+    applyGraphView();
+  }
+
+  function shortLabel(text, max = 70) {
+    const t = String(text || "");
+    return t.length > max ? `${t.slice(0, max - 1)}…` : t;
+  }
+
+  function renderGraph(data) {
+    const svg = $("graph-svg");
+    svg.replaceChildren();
+    const nodes = (data.nodes || []).map((n) => ({ ...n }));
+    const edges = data.edges || [];
+    graphState.nodes = nodes;
+    graphState.edges = edges;
+    const nArtigos = nodes.filter((n) => n.type === "artigo").length;
+    const nRefs = nodes.length - nArtigos;
+    if (!nodes.length) {
+      graphState.view = { x: 0, y: 0, w: GRAPH_W, h: GRAPH_H };
+      applyGraphView();
+      $("graph-empty").classList.remove("hidden");
+      $("graph-subtitle").textContent = data.articles_with_references
+        ? `${data.articles_with_references} artigo(s) com referências, mas nenhuma referência em comum.`
+        : "Os artigos desta pesquisa não têm referências registradas.";
+      return;
+    }
+    $("graph-subtitle").textContent =
+      `${nArtigos} artigos mais bem ranqueados · ${nRefs} referências em comum · ${edges.length} ligações`;
+
+    const links = layoutGraph(nodes, edges, GRAPH_W, GRAPH_H);
+    const maxCit = Math.max(2, ...nodes.filter((n) => n.type === "referencia").map((n) => n.citations || 2));
+
+    const edgeGroup = document.createElementNS(SVG_NS, "g");
+    edgeGroup.setAttribute("class", "graph-edges");
+    const linesByNode = new Map();
+    for (const [a, b] of links) {
+      const line = document.createElementNS(SVG_NS, "line");
+      line.setAttribute("x1", a.x.toFixed(1));
+      line.setAttribute("y1", a.y.toFixed(1));
+      line.setAttribute("x2", b.x.toFixed(1));
+      line.setAttribute("y2", b.y.toFixed(1));
+      edgeGroup.append(line);
+      for (const n of [a, b]) {
+        if (!linesByNode.has(n.id)) linesByNode.set(n.id, []);
+        linesByNode.get(n.id).push(line);
+      }
+    }
+    svg.append(edgeGroup);
+
+    const tooltip = $("graph-tooltip");
+    const wrap = svg.parentElement;
+    const nodeGroup = document.createElementNS(SVG_NS, "g");
+    for (const n of nodes) {
+      const circle = document.createElementNS(SVG_NS, "circle");
+      circle.setAttribute("cx", n.x.toFixed(1));
+      circle.setAttribute("cy", n.y.toFixed(1));
+      if (n.type === "artigo") {
+        n.baseR = 7;
+        circle.setAttribute("class", "graph-node artigo");
+        circle.style.fill = n.score == null ? "var(--blue)" : scoreBadgeColors(n.score).bg;
+      } else {
+        n.baseR = 3 + 6 * Math.sqrt(((n.citations || 2) - 1) / Math.max(1, maxCit - 1));
+        circle.setAttribute("class", "graph-node referencia");
+      }
+      n.circle = circle;
+      const show = (event) => {
+        const lines = n.type === "artigo"
+          ? [
+            shortLabel(n.label, 110),
+            [n.ano, n.score != null ? `score ${Number(n.score).toFixed(3)}` : "sem score"].filter(Boolean).join(" · "),
+            n.doi,
+          ]
+          : [`Referência: ${n.doi}`, `Citada por ${n.citations} artigos da pesquisa`];
+        tooltip.replaceChildren(...lines.filter(Boolean).map((text, i) => {
+          const el = document.createElement(i === 0 ? "strong" : "span");
+          el.textContent = text;
+          return el;
+        }));
+        const box = wrap.getBoundingClientRect();
+        tooltip.style.left = `${Math.min(box.width - 250, Math.max(4, event.clientX - box.left + 12))}px`;
+        tooltip.style.top = `${Math.max(4, event.clientY - box.top + 12)}px`;
+        tooltip.classList.remove("hidden");
+        svg.classList.add("focusing");
+        circle.classList.add("active");
+        (linesByNode.get(n.id) || []).forEach((l) => l.classList.add("active"));
+      };
+      const hide = () => {
+        tooltip.classList.add("hidden");
+        svg.classList.remove("focusing");
+        circle.classList.remove("active");
+        (linesByNode.get(n.id) || []).forEach((l) => l.classList.remove("active"));
+      };
+      circle.addEventListener("mouseenter", show);
+      circle.addEventListener("mousemove", show);
+      circle.addEventListener("mouseleave", hide);
+      if (n.doi) {
+        circle.style.cursor = "pointer";
+        circle.addEventListener("click", () => {
+          const doi = n.doi.replace(/^https?:\/\/(dx\.)?doi\.org\//i, "");
+          window.open(`https://doi.org/${encodeURI(doi)}`, "_blank", "noopener");
+        });
+      }
+      nodeGroup.append(circle);
+    }
+    svg.append(nodeGroup);
+    fitGraphView();
+    // Tamanho dos nós e espessura das linhas acompanham o enquadramento inicial, para não ficarem minúsculos.
+    const scale = Math.max(1, graphState.view.w / GRAPH_W);
+    for (const n of nodes) n.circle.setAttribute("r", (n.baseR * scale).toFixed(1));
+    svg.style.setProperty("--graph-scale", String(scale));
+  }
+
+  function svgPoint(event) {
+    const box = $("graph-svg").getBoundingClientRect();
+    const v = graphState.view;
+    return {
+      x: v.x + ((event.clientX - box.left) / box.width) * v.w,
+      y: v.y + ((event.clientY - box.top) / box.height) * v.h,
+    };
+  }
+
+  function setupGraphControls() {
+    const svg = $("graph-svg");
+    svg.addEventListener("wheel", (event) => {
+      if (!graphState.nodes.length) return;
+      event.preventDefault();
+      const p = svgPoint(event);
+      zoomGraph(event.deltaY > 0 ? 1.15 : 1 / 1.15, p.x, p.y);
+    }, { passive: false });
+    let drag = null;
+    svg.addEventListener("pointerdown", (event) => {
+      if (event.target.closest(".graph-node")) return;
+      drag = { x: event.clientX, y: event.clientY, view: { ...graphState.view } };
+      svg.setPointerCapture(event.pointerId);
+      svg.classList.add("panning");
+    });
+    svg.addEventListener("pointermove", (event) => {
+      if (!drag) return;
+      const box = svg.getBoundingClientRect();
+      const dx = ((event.clientX - drag.x) / box.width) * drag.view.w;
+      const dy = ((event.clientY - drag.y) / box.height) * drag.view.h;
+      graphState.view = { ...drag.view, x: drag.view.x - dx, y: drag.view.y - dy };
+      applyGraphView();
+    });
+    const end = () => { drag = null; svg.classList.remove("panning"); };
+    svg.addEventListener("pointerup", end);
+    svg.addEventListener("pointercancel", end);
+    $("graph-zoom-in").addEventListener("click", () => zoomGraph(1 / 1.25));
+    $("graph-zoom-out").addEventListener("click", () => zoomGraph(1.25));
+    $("graph-reset").addEventListener("click", () => { if (activeResearchId) loadGraph(activeResearchId); });
+  }
+
   async function openResearch(researchId) {
     try {
       const detail = await fetchJson(`/api/history/${encodeURIComponent(researchId)}`, { cache: "no-store" });
@@ -537,7 +874,17 @@
       $("files-subtitle").textContent = `Pasta ./saida/${detail.id} (${(detail.files || []).length} arquivos)`;
       renderPieChart(detail.by_base || [], detail.total_articles, detail.consolidated_articles);
       renderFileLinks($("research-files"), detail.id, detail.files || []);
+      const rankingNotes = {
+        completo: "Ordenados do maior para o menor score. Clique em um artigo para expandir.",
+        parcial: "Ranking incompleto: a triagem foi interrompida. Exibindo os artigos avaliados até a interrupção.",
+        ausente: "Ranking não gerado (execução interrompida ou com erro). Exibindo o consolidado, sem score nem justificativa.",
+      };
+      const note = $("articles-subtitle");
+      note.textContent = rankingNotes[detail.ranking] || rankingNotes.completo;
+      note.classList.toggle("warning-text", detail.ranking !== "completo");
       renderTopArticles();
+      renderTiming(detail.timing || {});
+      loadGraph(detail.id);
     } catch (error) {
       notify(error.message, true);
     }
@@ -581,74 +928,118 @@
     catch (error) { notify(error.message, true); }
     finally { if (button) button.disabled = false; }
   }
-  function updateOllama(status) {
+  // Único indicador do modelo: o seletor mostra qual está escolhido; esta linha mostra o estado dele.
+  function renderModelStatus() {
+    const status = lastOllamaStatus;
     const dot = $("ollama-dot");
     const label = $("ollama-label");
-    const secondary = $("state-detail");
     dot.className = "ollama-dot";
-    if (status.ollama_status === "pronto") {
-      dot.classList.add("ready");
-      label.textContent = `Modelo pronto · ${status.ollama_model}`;
-      secondary.textContent = `Ollama Pronto · ${status.ollama_model}`;
-    } else if (status.ollama_status === "erro") {
+    const selected = $("model").value;
+    const loaded = status.ollama_model;
+    if (status.ollama_status === "erro") {
       dot.classList.add("error");
-      label.textContent = "Ollama indisponível";
-      secondary.textContent = status.ollama_error || "Verifique a instalação do Ollama.";
+      label.textContent = status.ollama_error || "Ollama indisponível";
+    } else if (modelListError) {
+      dot.classList.add("error");
+      label.textContent = modelListError;
+    } else if (status.ollama_status === "pronto") {
+      const accelerator = status.ollama_accelerator && status.ollama_accelerator !== "não informado"
+        ? ` · ${status.ollama_accelerator}` : "";
+      if (selected && loaded && selected !== loaded) {
+        dot.classList.add("idle");
+        label.textContent = "Será carregado ao iniciar a pesquisa";
+      } else {
+        dot.classList.add("ready");
+        label.textContent = `Pronto${accelerator}`;
+      }
     } else {
       dot.classList.add("loading");
       label.textContent = "Iniciando Ollama…";
-      secondary.textContent = "Iniciando serviço e carregando modelo…";
     }
-    const accelerator = status.ollama_accelerator || "não informado";
-    $("gpu-status").textContent = accelerator;
-    const acceleratorDot = document.querySelector(".accelerator-dot");
-    acceleratorDot.classList.toggle("gpu", accelerator.includes("GPU") && !accelerator.startsWith("0%"));
-    acceleratorDot.classList.toggle("cpu", accelerator.startsWith("0% GPU"));
+  }
+
+  function updateOllama(status) {
+    lastOllamaStatus = status;
+    renderModelStatus();
     if ((status.ollama_status === "pronto" || status.ollama_status === "erro") && !selectModelsRequested) {
       selectModelsRequested = true;
       refreshModels();
     }
   }
 
-  function updateStatus(status) {
-    updateOllama(status);
-    const badge = $("state-dot");
-    badge.className = "state-dot";
-    if (status.running) badge.classList.add("loading");
-    else if (status.stage === "concluído") badge.classList.add("ready");
-    $("stage").textContent = status.running ? status.stage : status.stage === "falhou" ? "Execução com erro" : status.stage === "concluído" ? "Pesquisa concluída" : "Pronto para configurar";
-    $("run").disabled = status.running;
-    const progressCard = $("progress-card");
-    const showProgress = status.running || status.stage === "falhou" || status.stage === "concluído";
-    progressCard.classList.toggle("hidden", !showProgress);
-    $("progress-stage").textContent = status.stage;
-    $("progress-number").textContent = status.total ? `${status.processed} / ${status.total}` : "";
-    const fill = $("progress-fill");
-    const track = fill.parentElement;
-    const isIndeterminate = Boolean(status.running && !status.total);
-    track.classList.toggle("indeterminate", isIndeterminate);
-    if (isIndeterminate) {
-      fill.style.removeProperty("width");
-    } else if (status.total) {
-      fill.style.width = `${Math.round((status.processed / status.total) * 100)}%`;
-    } else {
-      fill.style.width = status.stage === "concluído" ? "100%" : "0%";
-    }
-    $("progress-detail").textContent = status.total
-      ? `Triagem de artigos${status.current ? ` · ${status.current}` : ""}`
-      : status.running ? status.stage === "Buscando Artigos" ? "Consultando as bases acadêmicas em paralelo …" : status.stage === "carregando modelo" ? "O serviço Ollama está sendo preparado…" : "Preparando execução…"
-        : status.error || status.output || status.ollama_error || "";
+  // ---------- Barra de status e botão de execução ----------
+  const SEEN_RESULT_KEY = "coletor-resultado-visto";
+  let lastStatus = {};
 
-    if (status.stage !== lastRunStage && status.stage === "concluído") {
-      $("result-title").textContent = "Ranking gerado com sucesso";
-      $("result-message").textContent = status.output ? `Arquivo: ${status.output}` : "Os arquivos desta execução estão no histórico.";
-      $("result-banner").classList.remove("hidden");
-      notify("Pesquisa concluída; arquivos disponíveis no histórico.");
-      refreshHistory();
-    } else if (status.stage !== lastRunStage && status.stage === "falhou") {
-      notify(status.error || "A execução falhou. Consulte os detalhes do status.", true);
+  function seenResult() {
+    try { return sessionStorage.getItem(SEEN_RESULT_KEY) || ""; } catch { return ""; }
+  }
+
+  function markResultSeen(researchId) {
+    try { sessionStorage.setItem(SEEN_RESULT_KEY, researchId || ""); } catch { /* sem armazenamento */ }
+  }
+
+  function statusText(status) {
+    const stage = status.stage || "ocioso";
+    if (status.running) {
+      if (stage === "cancelando") return ["Cancelando…", "Interrompendo a etapa atual"];
+      if (stage === "Buscando Artigos") return ["Buscando artigos", "Consultando as bases em paralelo"];
+      if (stage === "Validando e Ranqueando") {
+        return ["Classificando artigos", status.current ? shortLabel(status.current, 90) : "Triagem com o modelo local"];
+      }
+      if (stage === "carregando modelo") return ["Carregando o modelo", status.ollama_model || ""];
+      return ["Preparando a execução", ""];
     }
-    lastRunStage = status.stage;
+    if (stage === "concluído") return ["Pesquisa concluída", "Ranking gerado"];
+    if (stage === "cancelado") return ["Pesquisa cancelada", "Resultados parciais ficam no histórico"];
+    if (stage === "falhou") return ["Execução com erro", status.error || "Consulte o relatório da execução"];
+    return ["Pronto para configurar", ""];
+  }
+
+  function updateStatus(status) {
+    lastStatus = status;
+    updateOllama(status);
+    const stage = status.stage || "ocioso";
+    const [title, detail] = statusText(status);
+    const bar = $("status-bar");
+    bar.dataset.state = status.running ? "running" : stage === "concluído" ? "done" : stage === "falhou" ? "error" : stage === "cancelado" ? "cancelled" : "idle";
+    const dot = $("state-dot");
+    dot.className = "state-dot";
+    if (status.running) dot.classList.add("loading");
+    else if (stage === "concluído") dot.classList.add("ready");
+    else if (stage === "falhou") dot.classList.add("error");
+    $("stage").textContent = title;
+    $("status-detail").textContent = detail;
+    bar.title = [title, detail].filter(Boolean).join(" · ");
+    $("status-count").textContent = status.running && status.total ? `${status.processed} / ${status.total}` : "";
+
+    const fill = $("status-fill");
+    const track = fill.parentElement;
+    track.classList.toggle("visible", Boolean(status.running));
+    track.classList.toggle("indeterminate", Boolean(status.running && !status.total));
+    fill.style.width = status.running && status.total ? `${Math.round((status.processed / status.total) * 100)}%` : "";
+
+    const showResult = !status.running && stage === "concluído" && status.research_id && seenResult() !== status.research_id;
+    $("run").classList.toggle("hidden", Boolean(status.running || showResult));
+    $("run").disabled = Boolean(status.running);
+    $("run-busy").classList.toggle("hidden", !status.running);
+    $("cancel").classList.toggle("hidden", !status.running);
+    $("cancel").disabled = stage === "cancelando";
+    $("view-result").classList.toggle("hidden", !showResult);
+
+    if (stage !== lastRunStage && lastRunStage !== "ocioso") {
+      if (stage === "concluído") {
+        notify("Pesquisa concluída.");
+        refreshHistory();
+      } else if (stage === "falhou") {
+        notify(status.error || "A execução falhou.", true);
+        refreshHistory();
+      } else if (stage === "cancelado") {
+        notify("Pesquisa cancelada.");
+        refreshHistory();
+      }
+    }
+    lastRunStage = stage;
   }
 
   document.querySelectorAll(".nav-item").forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
@@ -662,16 +1053,34 @@
     try {
       const payload = saveLocally();
       await fetchJson("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      $("result-banner").classList.add("hidden");
-      notify("Pesquisa iniciada.");
+      lastRunStage = "iniciando";
+      poll();
     } catch (error) {
       button.disabled = false;
       notify(error.message, true);
     }
   });
+  $("cancel").addEventListener("click", async () => {
+    $("cancel").disabled = true;
+    try {
+      await fetchJson("/api/cancel", { method: "POST" });
+      poll();
+    } catch (error) {
+      $("cancel").disabled = false;
+      notify(error.message, true);
+    }
+  });
+  $("view-result").addEventListener("click", async () => {
+    const researchId = lastStatus.research_id;
+    markResultSeen(researchId);
+    $("view-result").classList.add("hidden");
+    $("run").classList.remove("hidden");
+    await refreshHistory();
+    if (researchId) openResearch(researchId);
+  });
   $("refresh-history").addEventListener("click", refreshHistory);
   $("refresh-models").addEventListener("click", refreshModels);
-  $("model").addEventListener("change", () => { preferredModel = $("model").value; });
+  $("model").addEventListener("change", () => { preferredModel = $("model").value; renderModelStatus(); });
   $("logout").addEventListener("click", async () => {
     try {
       await fetchJson("/api/auth/logout", { method: "POST", credentials: "same-origin" });
@@ -681,16 +1090,23 @@
       notify(error.message, true);
     }
   });
-  $("open-history").addEventListener("click", async () => {
-    if (!historyItems.length) await refreshHistory();
-    if (historyItems.length) openResearch(historyItems[0].id);
-  });
   $("peso_aderencia").addEventListener("input", (e) => rebalanceWeights("aderencia", e.target.value));
   $("peso_aderencia_num").addEventListener("change", (e) => rebalanceWeights("aderencia", e.target.value));
   $("peso_ano").addEventListener("input", (e) => rebalanceWeights("ano", e.target.value));
   $("peso_ano_num").addEventListener("change", (e) => rebalanceWeights("ano", e.target.value));
   $("peso_citacoes").addEventListener("input", (e) => rebalanceWeights("citacoes", e.target.value));
   $("peso_citacoes_num").addEventListener("change", (e) => rebalanceWeights("citacoes", e.target.value));
+  $("peso_tipo").addEventListener("input", (e) => rebalanceWeights("tipo", e.target.value));
+  $("peso_tipo_num").addEventListener("change", (e) => rebalanceWeights("tipo", e.target.value));
+  typeValueInputs().forEach((input) => input.addEventListener("change", () => currentTypeValues()));
+  $("temperatura").addEventListener("input", (e) => renderTemperature(e.target.value));
+  $("temperatura_num").addEventListener("change", (e) => renderTemperature(e.target.value));
+  $("theme-toggle").addEventListener("click", () => {
+    window.coletorTheme.toggle();
+    syncThemeButton();
+  });
+  syncThemeButton();
+  setupGraphControls();
 
 
   fetchJson("/api/config")
@@ -699,6 +1115,24 @@
       try {
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
         if (saved?.model === "qwen2.5:7b") saved.model = "qwen3.5:0.8b";
+        if (saved) {
+          saved.config = { ...defaults.config, ...(saved.config || {}) };
+          // Padrões novos no servidor (versão diferente): consulta e critérios salvos são substituídos uma vez.
+          let savedVersion = null;
+          try { savedVersion = localStorage.getItem(DEFAULTS_VERSION_KEY); } catch { /* sem armazenamento */ }
+          const outdated = defaults.defaults_version && savedVersion !== defaults.defaults_version;
+          if (outdated || !String(saved.config.query || "").trim()) saved.config.query = defaults.config?.query || "";
+          if (outdated || !String(saved.criteria || "").trim()) saved.criteria = defaults.criteria || "";
+          // Migração única: configurações salvas com o padrão antigo (0) passam ao novo padrão (0,1).
+          let tempMigrated = false;
+          try { tempMigrated = localStorage.getItem(TEMPERATURE_MIGRATION_KEY) === "1"; } catch { /* sem armazenamento */ }
+          if (saved.temperature === undefined || (!tempMigrated && Number(saved.temperature) === 0)) {
+            saved.temperature = defaults.temperature ?? DEFAULT_TEMPERATURE;
+          }
+          try { localStorage.setItem(TEMPERATURE_MIGRATION_KEY, "1"); } catch { /* sem armazenamento */ }
+        }
+        try { if (defaults.defaults_version) localStorage.setItem(DEFAULTS_VERSION_KEY, defaults.defaults_version); }
+        catch { /* sem armazenamento */ }
         populate(saved || defaults);
       }
       catch { populate(defaults); }

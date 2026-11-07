@@ -1,32 +1,41 @@
 /* Model selection block inside the sidebar footer (.sidebar-bottom), above "Execução no servidor". */
-.panel-icon.green{background:#e8f7f1;color:#189775}
+.panel-icon.green{background:var(--dk-bg-e8f7f1, #e8f7f1);color:var(--dk-fg-189775, #189775)}
 .sidebar{overflow-y:auto}
-.model-panel{display:grid;gap:10px;padding-bottom:13px;border-bottom:1px solid #edf0f5}
+.model-panel{display:grid;gap:10px;padding-bottom:13px;border-bottom:1px solid var(--dk-border-edf0f5, #edf0f5)}
 .model-heading{display:flex;align-items:center;gap:9px;min-width:0}
 .model-heading .panel-icon{width:26px;height:26px;flex:none;border-radius:8px;font-size:15px}
 .model-title{flex:1;min-width:0}
 .model-heading h2{margin:0;font-size:11.5px;letter-spacing:-.02em}
-.model-heading p{margin:2px 0 0;color:#8a96a9;font-size:9.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.model-heading p{margin:2px 0 0;color:var(--dk-fg-8a96a9, #8a96a9);font-size:9.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .model-refresh{width:26px;height:26px;min-height:26px;padding:0;flex:none;margin-left:auto;border-radius:7px;font-size:13px;line-height:1}
 .model-controls{display:grid;grid-template-columns:1fr;gap:8px}
 .model-select-field{margin:0}
 .model-select-field label{margin-bottom:5px;font-size:10.5px}
-.model-select-field select{width:100%;border:1px solid #dfe5ee;border-radius:8px;padding:8px 9px;background:#fff;color:var(--ink);font:11px/1.4 inherit}
-.model-select-field select:focus{outline:0;border-color:#91a7ff;box-shadow:0 0 0 3px #4168ed12}
-.model-select-field select:disabled{background:#f7f8fb;color:#8a96a9}
+.model-select-field select{width:100%;border:1px solid var(--dk-border-dfe5ee, #dfe5ee);border-radius:8px;padding:8px 9px;background:var(--dk-bg-fff, #fff);color:var(--ink);font:11px/1.4 inherit}
+.model-select-field select:focus{outline:0;border-color:var(--dk-border-91a7ff, #91a7ff);box-shadow:0 0 0 3px var(--dk-shadow-4168ed12, #4168ed12)}
+.model-select-field select:disabled{background:var(--dk-bg-f7f8fb, #f7f8fb);color:var(--dk-fg-8a96a9, #8a96a9)}
 .model-select-field small{font-size:9.5px;line-height:1.35}
-.accelerator-chip{display:flex;align-items:center;gap:9px;min-width:0;padding:8px 10px;border:1px solid #e8edf3;border-radius:9px;background:#fafbfd}
-.accelerator-dot{width:8px;height:8px;flex:none;border-radius:50%;background:#aab4c3}
-.accelerator-dot.gpu{background:#1ca887;box-shadow:0 0 0 3px #1ca88719}
-.accelerator-dot.cpu{background:#e1a23b;box-shadow:0 0 0 3px #e1a23b19}
+.accelerator-chip{display:flex;align-items:center;gap:9px;min-width:0;padding:8px 10px;border:1px solid var(--dk-border-e8edf3, #e8edf3);border-radius:9px;background:var(--dk-bg-fafbfd, #fafbfd)}
+.accelerator-dot{width:8px;height:8px;flex:none;border-radius:50%;background:var(--dk-bg-aab4c3, #aab4c3)}
+.accelerator-dot.gpu{background:var(--dk-bg-1ca887, #1ca887);box-shadow:0 0 0 3px var(--dk-shadow-1ca88719, #1ca88719)}
+.accelerator-dot.cpu{background:var(--dk-bg-e1a23b, #e1a23b);box-shadow:0 0 0 3px var(--dk-shadow-e1a23b19, #e1a23b19)}
 .accelerator-chip>div{min-width:0}
 .accelerator-chip strong,.accelerator-chip small{display:block}
 .accelerator-chip strong{font-size:10px}
-.accelerator-chip small{margin-top:2px;overflow:hidden;color:#8692a4;font-size:9px;text-overflow:ellipsis;white-space:nowrap}
+.accelerator-chip small{margin-top:2px;overflow:hidden;color:var(--dk-fg-8692a4, #8692a4);font-size:9px;text-overflow:ellipsis;white-space:nowrap}
 /* Mobile: show the model selector on a second row while keeping the rest of the sidebar footer hidden. */
 @media(max-width:650px){.sidebar{flex-wrap:wrap;overflow:visible}
-.sidebar-bottom{display:block;order:3;width:100%;margin-top:8px;padding:8px 0 0;border-top:1px solid #edf0f5}
+.sidebar-bottom{display:block;order:3;width:100%;margin-top:8px;padding:8px 0 0;border-top:1px solid var(--dk-border-edf0f5, #edf0f5)}
 .sidebar-bottom .local-indicator,.sidebar-bottom .ollama-small,.sidebar-bottom .logout-button{display:none}
 .model-panel{padding-bottom:0;border-bottom:0}
 .model-refresh{width:26px;padding:0;font-size:13px}
 }
+/* Estado do modelo selecionado: indicador único (substitui o chip de aceleração e o rodapé do Ollama). */
+.model-status{display:flex;align-items:center;gap:8px;min-width:0;padding:7px 10px;border:1px solid var(--line);border-radius:9px;color:var(--muted);font-size:10px;line-height:1.35}
+.model-status span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.ollama-dot.idle{background:#8aa0c8}
+/* Alternância de tema claro/escuro. */
+.theme-toggle{display:flex;align-items:center;gap:8px;width:100%;margin-bottom:6px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--muted);text-align:left;font-family:inherit;font-size:10.5px;font-weight:600;cursor:pointer}
+.theme-toggle:hover{border-color:var(--blue);color:var(--ink)}
+.theme-toggle-icon{width:14px;text-align:center;font-size:12px}
+@media(max-width:650px){.sidebar-bottom .theme-toggle{display:none}}
