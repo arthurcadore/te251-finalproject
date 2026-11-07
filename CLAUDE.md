@@ -39,7 +39,7 @@ Tabela da seção 8.1: referências nativas, conversão de IDs OpenAlex para DOI
 ### Fase 6 — Extensão autorizada: interface e ranking LLM
 1. Interface HTTP vinculada a `0.0.0.0`, protegida com `COLETOR_WEB_TOKEN` para acessos remotos, para preencher parâmetros equivalentes ao YAML e critérios de triagem; formulário não carrega YAML/TXT e salva preferências no `localStorage`; credenciais continuam apenas no `.env`. TLS deve ser terminado em proxy reverso.
 2. Após a busca, avaliar `consolidado.csv` com Ollama local e gerar `ranking.csv` preservando as colunas originais e acrescentando campos LLM.
-3. Score: 70% aderência, 15% recência, 15% citações (com `log(1+n_citacoes)`); metadados ausentes recebem 0,5. Validar citação literal do resumo.
+3. Score padrão: 70% aderência, 10% recência, 10% citações por ano (com `log(1+x)`), 10% tipo de publicação; pesos configuráveis na interface (ver `ESCOPO.md` seção 16); metadados ausentes recebem 0,5. Validar citação literal do resumo.
 4. Testes offline para score, saída, falhas por artigo e endpoints da interface; atualizar README e ESCOPO seção 16.
 
 ## Padrões de implementação

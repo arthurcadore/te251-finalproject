@@ -1,0 +1,37 @@
+Monte uma apresentação Beamer (16:9, pt-BR) sobre o meu projeto "Coletor de Artigos" e compile para PDF.
+
+ENTRADAS (nesta pasta)
+- apresentacao.tex: use SÓ o preâmbulo (cores, fontes, frametitle, rodapé, macros \fig \eqpanel \eqc \rot \motiv \pendente \cab, estilos TikZ radarbox/radararr). Descarte todo o conteúdo de radar.
+- background_first.jpeg (capa) e background.jpeg (seções), ambos 16:9.
+- Código do coletor: [PREENCHER caminho]. Leia antes de escrever; se divergir do que escrevi abaixo, siga o código.
+- Resultados: [PREENCHER arquivos, ex.: metricas.csv, base.csv]
+
+DADOS
+- Título: [PREENCHER] | Subtítulo: [PREENCHER]
+- Autores: [PREENCHER] | Instituição: [PREENCHER]
+- Rodapé: [PREENCHER] | Duração: [PREENCHER] min (~1 slide/min)
+
+PROJETO
+- Problema: [PREENCHER]
+- Fontes de dados: [PREENCHER]
+- Pipeline: [PREENCHER, ex.: busca → coleta → normalização → deduplicação → filtro com IA → exportação]
+- IA usada: [PREENCHER]
+- Avaliação e resultados: [PREENCHER]
+- Limitações / futuro: [PREENCHER]
+
+ESTRUTURA
+Capa, Sumário, Motivação, Objetivos, Fontes de dados (tabela), Arquitetura (fluxograma TikZ), Etapas do pipeline (1 slide cada), Resultados (funil, métricas, gráficos), Limitações, Conclusão, Referências.
+
+AJUSTES NO PREÂMBULO
+- Capa: imagem com width=\paperwidth,height=\paperheight centrada; texto à esquerda com text width=7.5cm.
+- \AtBeginSection: overlay com opacity=0.45 e remover círculos, linhas e sweep de radar.
+- Sumário com os intervalos de seção corretos; remover \usepackage{hyperref} duplicado e macros de radar não usados.
+- Se FiraSans não estiver instalada, use outra sans e me avise.
+
+REGRAS
+- Não invente números, resultados nem citações: dado ausente vira \pendente{...} no slide e "DADOS ILUSTRATIVOS" no gráfico.
+- Listas curtas (até 6 itens), sem erros de ortografia, sem placeholders em caixa alta.
+- Figuras em gerar_graficos.py (matplotlib, PDF em figuras/, fundo branco, paleta do tema, sem título interno).
+
+ENTREGA
+Rode gerar_graficos.py, compile com latexmk -pdf, corrija erros e overfull > 5pt, converta para PNG e confira cada slide visualmente. No fim, liste: nº de slides, seções, todos os \pendente restantes e divergências com o código.
