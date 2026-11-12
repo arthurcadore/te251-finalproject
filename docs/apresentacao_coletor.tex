@@ -11,8 +11,8 @@
 % ── DADOS DA APRESENTAÇÃO ────────────────────────────────────
 \newcommand{\apTitulo}{Coletor Multibase de Artigos Científicos}
 \newcommand{\apSubtitulo}{Aquisição de Artigos Acadêmicos e Classificação com LLM Local}
-\newcommand{\apAutores}{Arthur Cadore Matuella Barcella, Márcio Gholmié Labriola Filho, Pablo Kunz de Jesus, Pedro Tenório}
-\newcommand{\apAutoresCapa}{Arthur Cadore Matuella Barcella \(\cdot\) Márcio Gholmié Labriola Filho  \(\cdot\) Pablo Kunz de Jesus \(\cdot\) Pedro Tenório}
+\newcommand{\apAutores}{Arthur Cadore Matuella Barcella, Márcio Gholmié Labriola Filho, Pablo Kunz de Jesus, Pedro Henrique da Silva Tenório}
+\newcommand{\apAutoresCapa}{Arthur C. M. Barcella \(\cdot\) Márcio G. L. Filho  \(\cdot\) Pablo K. Jesus \(\cdot\) Pedro H. S. Tenório}
 \newcommand{\apInstituicao}{ITA -- TE-251 -- Projeto final}
 \newcommand{\apRodape}{COLETOR DE ARTIGOS}
 \newcommand{\apRodapeCentro}{Como o coletor funciona}
@@ -464,21 +464,12 @@ Do not invent a quotation. The quote must appear verbatim in the abstract.};
       \begin{tabular}{@{}l >{\raggedright\arraybackslash}p{0.62\linewidth}@{}}
         \toprule
         \pvar{criteria} & campo ``Critérios de triagem'' da interface (salvo em \cod{criterios.txt}) \\
-        \pvar{title}    & coluna \cod{titulo} do consolidado \\
+        \pvar{title}    & coluna \cod{titulo} \\
         \pvar{abstract} & coluna \cod{resumo} \\
         \pvar{keywords} & coluna \cod{palavras\_chave} \\
         \bottomrule
       \end{tabular}
       \vspace{5pt}
-      \begin{block}{Chamada ao Ollama}
-        \tiny
-        \begin{itemize}\setlength{\itemsep}{1pt}
-          \item \cod{format}: JSON Schema com \cod{justification}, \cod{quote} e \cod{match}.
-          \item \cod{temperature}: valor da interface (padrão 0,1).
-          \item \cod{think=False} e no máximo 1.024 \emph{tokens} de resposta.
-          \item 1ª linha protege contra instruções escondidas no resumo (\emph{prompt injection}).
-        \end{itemize}
-      \end{block}
     \end{column}
   \end{columns}
 \end{frame}
@@ -492,7 +483,7 @@ Do not invent a quotation. The quote must appear verbatim in the abstract.};
         \begin{itemize}\setlength{\itemsep}{2pt}
           \item Teste em Python: \cod{resultado.quote in resumo}, ou seja, comparação exata de substring.
           \item Diferenciam-se maiúsculas, espaços e pontuação; sem correspondência aproximada.
-          \item Citação vazia é rejeitada; artigo sem resumo nem é enviado ao modelo.
+          \item Citação vazia é rejeitada.
           \item \textcolor{accentgold}{Limite:} garante que o trecho \emph{existe} no resumo, mas não que ele \emph{sustenta} a decisão.
         \end{itemize}
       \end{block}
@@ -539,14 +530,12 @@ Do not invent a quotation. The quote must appear verbatim in the abstract.};
       \begin{tabular}{@{}>{\ttfamily\color{radargreen}}l >{\raggedright\arraybackslash}p{0.6\linewidth}@{}}
         \toprule
         llm\_label         & rótulo: \texttt{incluido}, \texttt{duvidoso} ou \texttt{excluido} \\
-        llm\_match         & aderência devolvida pelo modelo: 0; 0,5 ou 1 \\
+        llm\_match         & aderência devolvida pelo modelo: 1; 0,5 ou 0 \\
         llm\_justification & justificativa do modelo + \emph{Evidência:} citação literal do resumo \\
-        llm\_score         & score final de 0 a 1 (fórmula acima) \\
+        llm\_score         & score final de 0 a 1 \\
         llm\_status        & \texttt{ok}, ou \texttt{erro} se a resposta foi rejeitada \\
         \bottomrule
       \end{tabular}
-      \par\vspace{3pt}
-      {\tiny\textcolor{textsub}{16 colunas do consolidado + 5 colunas LLM, ordenado por \texttt{llm\_score} (erros no fim).}}
     \end{column}
   \end{columns}
 \end{frame}
@@ -558,9 +547,6 @@ Do not invent a quotation. The quote must appear verbatim in the abstract.};
 \begin{frame}[t]{Interface web: nova pesquisa}
   \centering
   \shot[width=11.6cm]{nova_pesquisa.png}\par
-  \vspace{2pt}
-  \scriptsize\textcolor{textsub}{Consulta e bases \(\cdot\) pesos e temperatura \(\cdot\) critérios de triagem \(\cdot\) modelo do Ollama \(\cdot\) histórico de pesquisas\\
-  Equivalente ao \cod{config.yaml}; credenciais só no \cod{.env}; acesso remoto protegido por token.}
 \end{frame}
 
 \begin{frame}[t]{Caso de uso: consulta e critérios usados}
@@ -666,22 +652,21 @@ Do not invent a quotation. The quote must appear verbatim in the abstract.};
   \par\vspace{6pt}\raggedright
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.55\textwidth}
-      \begin{block}{Chatbot sobre os artigos coletados}
+      \begin{block}{Proximos passos de implementação}
         \scriptsize
         \begin{itemize}\setlength{\itemsep}{1pt}
           \item Indexar título, resumo e texto completo (quando houver) dos artigos ranqueados.
           \item Perguntas em linguagem natural, ex.: ``quais artigos usam Sentinel-1 para estimar umidade do solo?''
           \item Respostas citam o DOI e o trecho de origem, validados como na triagem.
-          \item Tudo local: nenhum dado sai da máquina.
         \end{itemize}
       \end{block}
     \end{column}
     \begin{column}{0.42\textwidth}
-      \begin{exampleblock}{Também no radar}
+      \begin{exampleblock}{Proximos passos de validação}
         \scriptsize
         \begin{itemize}\setlength{\itemsep}{1pt}
           \item Triagem com o texto completo dos PDFs de acesso aberto.
-          \item Reprodução automática dos artigos com \texttt{paper2ai}.
+          \item Reprodução automática dos artigos.
           \item Medir a precisão contra rotulação manual.
         \end{itemize}
       \end{exampleblock}

@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.8.30)  12 NOV 2026 16:06
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.8.30)  12 NOV 2026 16:57
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -1117,37 +1117,37 @@ Package pdftex.def Info: background.jpeg  used on input line 403.
 
 ]
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/m/n' in size <5.6> not available
-(Font)              Font shape `T1/FiraSans-OsF/regular/n' tried instead on input line 484.
+(Font)              Font shape `T1/FiraSans-OsF/regular/n' tried instead on input line 475.
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/regular/n' will be
-(Font)              scaled to size 5.6pt on input line 484.
+(Font)              scaled to size 5.6pt on input line 475.
 LaTeX Font Info:    Font shape `T1/FiraMono-TOsF/m/n' in size <5.6> not available
-(Font)              Font shape `T1/FiraMono-TOsF/regular/n' tried instead on input line 484.
+(Font)              Font shape `T1/FiraMono-TOsF/regular/n' tried instead on input line 475.
 LaTeX Font Info:    Font shape `T1/FiraMono-TOsF/regular/n' will be
-(Font)              scaled to size 5.6pt on input line 484.
+(Font)              scaled to size 5.6pt on input line 475.
 LaTeX Font Info:    Font shape `T1/FiraMono-TOsF/b/n' in size <5.6> not available
-(Font)              Font shape `T1/FiraMono-TOsF/bold/n' tried instead on input line 484.
+(Font)              Font shape `T1/FiraMono-TOsF/bold/n' tried instead on input line 475.
 LaTeX Font Info:    Font shape `T1/FiraMono-TOsF/bold/n' will be
-(Font)              scaled to size 5.6pt on input line 484.
+(Font)              scaled to size 5.6pt on input line 475.
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/b/it' in size <12> not available
-(Font)              Font shape `T1/FiraSans-OsF/bold/it' tried instead on input line 484.
+(Font)              Font shape `T1/FiraSans-OsF/bold/it' tried instead on input line 475.
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/bold/it' will be
-(Font)              scaled to size 12.0pt on input line 484.
+(Font)              scaled to size 12.0pt on input line 475.
  [12
 
 ]
-Overfull \hbox (0.6pt too wide) in paragraph at lines 513--513
+Overfull \hbox (0.6pt too wide) in paragraph at lines 504--504
 [][]  
  []
 
 [13
 
 ]
-Overfull \hbox (0.6pt too wide) in paragraph at lines 552--552
+Overfull \hbox (0.6pt too wide) in paragraph at lines 541--541
 [][]  
  []
 
 
-Overfull \hbox (8.51323pt too wide) in paragraph at lines 552--552
+Overfull \hbox (8.51323pt too wide) in paragraph at lines 541--541
 [][]  
  []
 
@@ -1156,7 +1156,7 @@ Overfull \hbox (8.51323pt too wide) in paragraph at lines 552--552
 ]
 File: background.jpeg Graphic file (type jpg)
 <use background.jpeg>
-Package pdftex.def Info: background.jpeg  used on input line 555.
+Package pdftex.def Info: background.jpeg  used on input line 544.
 (pdftex.def)             Requested size: 455.2152pt x 256.07922pt.
  [15
 
@@ -1164,7 +1164,7 @@ Package pdftex.def Info: background.jpeg  used on input line 555.
 <assets/nova_pesquisa.png, id=190, 1888.05376pt x 980.66376pt>
 File: assets/nova_pesquisa.png Graphic file (type png)
 <use assets/nova_pesquisa.png>
-Package pdftex.def Info: assets/nova_pesquisa.png  used on input line 564.
+Package pdftex.def Info: assets/nova_pesquisa.png  used on input line 550.
 (pdftex.def)             Requested size: 330.05214pt x 171.4242pt.
  [16
 
@@ -1172,95 +1172,95 @@ Package pdftex.def Info: assets/nova_pesquisa.png  used on input line 564.
 <assets/parametros_busca.png, id=198, 836.12375pt x 281.05pt>
 File: assets/parametros_busca.png Graphic file (type png)
 <use assets/parametros_busca.png>
-Package pdftex.def Info: assets/parametros_busca.png  used on input line 604.
+Package pdftex.def Info: assets/parametros_busca.png  used on input line 590.
 (pdftex.def)             Requested size: 167.28267pt x 56.22615pt.
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/b/it' in size <8> not available
-(Font)              Font shape `T1/FiraSans-OsF/bold/it' tried instead on input line 604.
+(Font)              Font shape `T1/FiraSans-OsF/bold/it' tried instead on input line 590.
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/bold/it' will be
-(Font)              scaled to size 8.0pt on input line 604.
+(Font)              scaled to size 8.0pt on input line 590.
 
-Underfull \hbox (badness 1009) in paragraph at lines 604--604
+Underfull \hbox (badness 1009) in paragraph at lines 590--590
 [][]\T1/FiraMono-TOsF/regular/n/5.6 Review question:[] How are SAR data used to map, monitor, or 
  []
 
 
-Underfull \hbox (badness 1231) in paragraph at lines 604--604
+Underfull \hbox (badness 1231) in paragraph at lines 590--590
 \T1/FiraMono-TOsF/regular/n/5.6 biomass, yield, soil moisture, irrigation, tillage, crop 
  []
 
-LaTeX Font Info:    Calculating math sizes for size <5.6> on input line 604.
+LaTeX Font Info:    Calculating math sizes for size <5.6> on input line 590.
 
 LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <3.91998> not available
-(Font)              size <5> substituted on input line 604.
+(Font)              size <5> substituted on input line 590.
 
 
 LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <2.8> not available
-(Font)              size <5> substituted on input line 604.
+(Font)              size <5> substituted on input line 590.
 
 
 LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <3.91998> not available
-(Font)              size <5> substituted on input line 604.
+(Font)              size <5> substituted on input line 590.
 
 
 LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <2.8> not available
-(Font)              size <5> substituted on input line 604.
+(Font)              size <5> substituted on input line 590.
 
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/m/it' in size <5.6> not available
-(Font)              Font shape `T1/FiraSans-OsF/regular/it' tried instead on input line 604.
+(Font)              Font shape `T1/FiraSans-OsF/regular/it' tried instead on input line 590.
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/regular/it' will be
-(Font)              scaled to size 5.6pt on input line 604.
+(Font)              scaled to size 5.6pt on input line 590.
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/m/it' in size <3.91998> not available
-(Font)              Font shape `T1/FiraSans-OsF/regular/it' tried instead on input line 604.
+(Font)              Font shape `T1/FiraSans-OsF/regular/it' tried instead on input line 590.
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/regular/it' will be
-(Font)              scaled to size 3.91998pt on input line 604.
+(Font)              scaled to size 3.91998pt on input line 590.
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/m/it' in size <2.8> not available
-(Font)              Font shape `T1/FiraSans-OsF/regular/it' tried instead on input line 604.
+(Font)              Font shape `T1/FiraSans-OsF/regular/it' tried instead on input line 590.
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/regular/it' will be
-(Font)              scaled to size 2.8pt on input line 604.
+(Font)              scaled to size 2.8pt on input line 590.
 
 LaTeX Font Warning: Font shape `OML/cmm/b/it' in size <3.91998> not available
-(Font)              size <5> substituted on input line 604.
+(Font)              size <5> substituted on input line 590.
 
 
 LaTeX Font Warning: Font shape `OML/cmm/b/it' in size <2.8> not available
-(Font)              size <5> substituted on input line 604.
+(Font)              size <5> substituted on input line 590.
 
 
 LaTeX Font Warning: Font shape `OMS/cmsy/b/n' in size <3.91998> not available
-(Font)              size <5> substituted on input line 604.
+(Font)              size <5> substituted on input line 590.
 
 
 LaTeX Font Warning: Font shape `OMS/cmsy/b/n' in size <2.8> not available
-(Font)              size <5> substituted on input line 604.
+(Font)              size <5> substituted on input line 590.
 
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/bx/it' in size <5.6> not available
-(Font)              Font shape `T1/FiraSans-OsF/b/it' tried instead on input line 604.
+(Font)              Font shape `T1/FiraSans-OsF/b/it' tried instead on input line 590.
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/b/it' in size <5.6> not available
-(Font)              Font shape `T1/FiraSans-OsF/bold/it' tried instead on input line 604.
+(Font)              Font shape `T1/FiraSans-OsF/bold/it' tried instead on input line 590.
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/bold/it' will be
-(Font)              scaled to size 5.6pt on input line 604.
+(Font)              scaled to size 5.6pt on input line 590.
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/bx/it' in size <3.91998> not available
-(Font)              Font shape `T1/FiraSans-OsF/b/it' tried instead on input line 604.
+(Font)              Font shape `T1/FiraSans-OsF/b/it' tried instead on input line 590.
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/b/it' in size <3.91998> not available
-(Font)              Font shape `T1/FiraSans-OsF/bold/it' tried instead on input line 604.
+(Font)              Font shape `T1/FiraSans-OsF/bold/it' tried instead on input line 590.
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/bold/it' will be
-(Font)              scaled to size 3.91998pt on input line 604.
+(Font)              scaled to size 3.91998pt on input line 590.
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/bx/it' in size <2.8> not available
-(Font)              Font shape `T1/FiraSans-OsF/b/it' tried instead on input line 604.
+(Font)              Font shape `T1/FiraSans-OsF/b/it' tried instead on input line 590.
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/b/it' in size <2.8> not available
-(Font)              Font shape `T1/FiraSans-OsF/bold/it' tried instead on input line 604.
+(Font)              Font shape `T1/FiraSans-OsF/bold/it' tried instead on input line 590.
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/bold/it' will be
-(Font)              scaled to size 2.8pt on input line 604.
+(Font)              scaled to size 2.8pt on input line 590.
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/m/n' in size <3.91998> not available
-(Font)              Font shape `T1/FiraSans-OsF/regular/n' tried instead on input line 604.
+(Font)              Font shape `T1/FiraSans-OsF/regular/n' tried instead on input line 590.
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/regular/n' will be
-(Font)              scaled to size 3.91998pt on input line 604.
+(Font)              scaled to size 3.91998pt on input line 590.
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/m/n' in size <2.8> not available
-(Font)              Font shape `T1/FiraSans-OsF/regular/n' tried instead on input line 604.
+(Font)              Font shape `T1/FiraSans-OsF/regular/n' tried instead on input line 590.
 LaTeX Font Info:    Font shape `T1/FiraSans-OsF/regular/n' will be
-(Font)              scaled to size 2.8pt on input line 604.
+(Font)              scaled to size 2.8pt on input line 590.
 
-Underfull \hbox (badness 1231) in paragraph at lines 604--604
+Underfull \hbox (badness 1231) in paragraph at lines 590--590
 \T1/FiraMono-TOsF/regular/n/5.6 acquired resistance, sodium adsorption ratio, search and 
  []
 
@@ -1270,31 +1270,31 @@ Underfull \hbox (badness 1231) in paragraph at lines 604--604
 <assets/artigos_por_base.png, id=206, 771.88374pt x 234.8775pt>
 File: assets/artigos_por_base.png Graphic file (type png)
 <use assets/artigos_por_base.png>
-Package pdftex.def Info: assets/artigos_por_base.png  used on input line 634.
+Package pdftex.def Info: assets/artigos_por_base.png  used on input line 620.
 (pdftex.def)             Requested size: 175.9869pt x 53.55118pt.
 <assets/grafo_artigos.png, id=207, 777.90625pt x 460.72125pt>
 File: assets/grafo_artigos.png Graphic file (type png)
 <use assets/grafo_artigos.png>
-Package pdftex.def Info: assets/grafo_artigos.png  used on input line 634.
+Package pdftex.def Info: assets/grafo_artigos.png  used on input line 620.
 (pdftex.def)             Requested size: 175.9869pt x 104.22723pt.
 LaTeX Font Info:    Font shape `TS1/FiraSans-OsF/m/n' in size <8> not available
-(Font)              Font shape `TS1/FiraSans-OsF/regular/n' tried instead on input line 634.
+(Font)              Font shape `TS1/FiraSans-OsF/regular/n' tried instead on input line 620.
 LaTeX Font Info:    Font shape `TS1/FiraSans-OsF/regular/n' will be
-(Font)              scaled to size 8.0pt on input line 634.
+(Font)              scaled to size 8.0pt on input line 620.
  [18
 
  <./assets/artigos_por_base.png> <./assets/grafo_artigos.png>]
 <assets/artigo_incluido.png, id=215, 1553.805pt x 608.2725pt>
 File: assets/artigo_incluido.png Graphic file (type png)
 <use assets/artigo_incluido.png>
-Package pdftex.def Info: assets/artigo_incluido.png  used on input line 646.
+Package pdftex.def Info: assets/artigo_incluido.png  used on input line 632.
 (pdftex.def)             Requested size: 347.12354pt x 135.89014pt.
  [19
 
  <./assets/artigo_incluido.png>]
 File: background.jpeg Graphic file (type jpg)
 <use background.jpeg>
-Package pdftex.def Info: background.jpeg  used on input line 649.
+Package pdftex.def Info: background.jpeg  used on input line 635.
 (pdftex.def)             Requested size: 455.2152pt x 256.07922pt.
  [20
 
@@ -1303,7 +1303,7 @@ Package pdftex.def Info: background.jpeg  used on input line 649.
 ]
 File: background_first.jpeg Graphic file (type jpg)
 <use background_first.jpeg>
-Package pdftex.def Info: background_first.jpeg  used on input line 693.
+Package pdftex.def Info: background_first.jpeg  used on input line 678.
 (pdftex.def)             Requested size: 455.2152pt x 256.07922pt.
  [22
 
@@ -1331,15 +1331,15 @@ Package rerunfilecheck Info: File `apresentacao_coletor.out' has not changed.
 (rerunfilecheck)             Checksum: 6900371D20CA7E4B45041568E97B971F;719.
  ) 
 Here is how much of TeX's memory you used:
- 28284 strings out of 476089
- 561554 string characters out of 5793232
+ 28283 strings out of 476089
+ 561536 string characters out of 5793232
  1946975 words of memory out of 5000000
- 49629 multiletter control sequences out of 15000+600000
+ 49628 multiletter control sequences out of 15000+600000
  1133762 words of font info for 165 fonts, out of 8000000 for 9000
  61 hyphenation exceptions out of 8191
  128i,18n,123p,432b,1127s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texlive/texmf-dist/fonts/type1/public/fira/FiraMono-Bold.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/fira/FiraMono-Regular.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/fira/FiraSans-Bold.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/fira/FiraSans-BoldItalic.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/fira/FiraSans-Italic.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/fira/FiraSans-Regular.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmex9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmss8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmss9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy9.pfb>
-Output written on apresentacao_coletor.pdf (22 pages, 1988315 bytes).
+Output written on apresentacao_coletor.pdf (22 pages, 1986775 bytes).
 PDF statistics:
  321 PDF objects out of 1000 (max. 8388607)
  208 compressed objects within 3 object streams
