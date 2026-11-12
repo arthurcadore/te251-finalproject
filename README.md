@@ -138,7 +138,7 @@ ollama pull qwen3.5:0.8b
 Preencha `.env` com suas credenciais de APIs e um `COLETOR_WEB_TOKEN` aleatório com pelo menos 32 caracteres. Esse token protege a interface de outros computadores e será digitado na página de login (não aparece um popup do navegador). A sessão fica em cookie HttpOnly assinado, expira após 12 horas e pode ser encerrada pelo botão “Sair da sessão”. Ao sair, a sessão é invalidada no servidor e o navegador passa a exigir o token para entrar de novo, inclusive em acesso local (`localhost`); o mesmo `COLETOR_WEB_TOKEN` continua válido para novos logins. Inicie o servidor:
 
 ```bash
-python -m coletor --web --host 0.0.0.0
+python -m coletor --web --host 0.0.0.0 --graph
 ```
 
 Abra `https://<domínio-do-servidor>/` (não use `0.0.0.0` como endereço no navegador). O bind padrão agora é `0.0.0.0`; para uso apenas local, passe `--host 127.0.0.1`. **Não exponha HTTP diretamente à Internet:** use firewall e um proxy reverso com HTTPS/TLS. O cookie de sessão recebe o atributo `Secure` quando a conexão é HTTPS (o proxy deve enviar `X-Forwarded-Proto`); em HTTP simples na rede local o login funciona, mas o token trafega sem criptografia. Requisições vindas de um proxy reverso (com `X-Forwarded-For`, `X-Real-IP`, `Forwarded` ou `X-Forwarded-Host`) sempre exigem login, mesmo que o proxy esteja na mesma máquina.
