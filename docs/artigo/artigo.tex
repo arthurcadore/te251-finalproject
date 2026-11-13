@@ -1,0 +1,362 @@
+% !TEX program = pdflatex
+% Artigo final TE-251 — formato do modelo SIGE 2026 (modelo_artigo_sige_2026_v1.docx)
+% A4, duas colunas (8,8 cm + 0,5 cm), Times, sem número de página.
+% Margens do modelo: superior/inferior 2,0 cm, esquerda 1,8 cm, direita 1,2 cm.
+\documentclass[10pt,a4paper,twocolumn]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{newtxtext,newtxmath}          % Times New Roman (texto e matemática)
+\usepackage[a4paper,top=2.0cm,bottom=2.0cm,left=1.8cm,right=1.2cm,columnsep=0.5cm]{geometry}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
+\usepackage{titlesec}
+\usepackage[font=footnotesize,labelsep=period]{caption}
+\usepackage{indentfirst}                   % recuo também no primeiro parágrafo, como no modelo
+\usepackage{xurl}
+\usepackage[hidelinks]{hyperref}
+\urlstyle{same}                            % URLs em Times, não em fonte monoespaçada
+\usepackage{flushend}                      % equilibra as colunas da última página
+
+\pagestyle{empty}                          % sem numeração de páginas
+\raggedbottom                               % evita vãos verticais esticados nas colunas
+\setlength{\parindent}{1.2em}              % "parágrafo, três espaços"
+\setlength{\parskip}{0pt}                  % sem espaço entre parágrafos
+\emergencystretch=1em
+\setlength{\abovedisplayskip}{6pt plus 2pt minus 2pt}
+\setlength{\belowdisplayskip}{6pt plus 2pt minus 2pt}
+
+% ── Títulos (Tabela I do modelo) ─────────────────────────────
+% Seção: 10 pt, versalete, centralizada, numeração romana.
+\renewcommand{\thesection}{\Roman{section}}
+\titleformat{\section}{\centering\normalfont\normalsize\scshape}{\thesection.}{0.4em}{}
+\titlespacing*{\section}{0pt}{1.2\baselineskip}{\baselineskip}
+% Subseção: 10 pt, itálico, letra maiúscula.
+\renewcommand{\thesubsection}{\Alph{subsection}}
+\titleformat{\subsection}{\normalfont\normalsize\itshape}{\thesubsection.}{0.4em}{}
+\titlespacing*{\subsection}{0pt}{0.8\baselineskip}{0.5\baselineskip}
+% Subsubseção: em linha, itálico, "1) Formato:".
+\renewcommand{\thesubsubsection}{\arabic{subsubsection}}
+\titleformat{\subsubsection}[runin]{\normalfont\normalsize\itshape}{\thesubsubsection)}{0.4em}{}[:]
+\titlespacing*{\subsubsection}{\parindent}{0.3\baselineskip}{0.4em}
+
+% ── Legendas: "TABELA I. TÍTULO" (8 pt, versalete) e "Fig. 1. Texto" (8 pt) ──
+\renewcommand{\thetable}{\Roman{table}}
+\DeclareCaptionLabelFormat{tabsige}{\textsc{Tabela #2}}
+\DeclareCaptionTextFormat{tabsc}{\textsc{#1}}
+\captionsetup[table]{labelformat=tabsige,textformat=tabsc,justification=centering,skip=3pt}
+\captionsetup[figure]{name=Fig.,justification=centering,skip=4pt}
+
+% ── Resumo e palavras-chave (9 pt, negrito) ──────────────────
+\newcommand{\resumo}[1]{\noindent{\fontsize{9}{10.5}\selectfont\bfseries\textit{Resumo} --- #1\par}}
+\newcommand{\palavraschave}[1]{\vspace{\baselineskip}\noindent{\fontsize{9}{10.5}\selectfont\bfseries\textit{Palavras-Chave} --- #1\par}}
+
+% Identificadores de código, arquivos e valores literais: Times itálico (o modelo pede Times em todo o texto).
+\newcommand{\cod}[1]{\textit{#1}}
+
+\begin{document}
+
+% ── Cabeçalho em coluna única ────────────────────────────────
+\twocolumn[{%
+  \begin{center}
+    {\fontsize{24}{28}\selectfont Coletor Multibase de Artigos com Triagem\\[2pt]
+     por Modelo de Linguagem Local\par}
+    \vspace{14pt}
+    {\fontsize{11}{13}\selectfont Arthur Cadore Matuella Barcella, Márcio Gholmié Labriola Filho,\\
+     Pablo Kunz de Jesus e Pedro Henrique da Silva Tenório\par}
+    \vspace{3pt}
+    {\fontsize{8}{9.5}\selectfont Instituto Tecnológico de Aeronáutica (ITA), São José dos Campos/SP -- Brasil\par}
+  \end{center}
+  \vspace{18pt}
+}]
+
+% Nota de rodapé única admitida pelo modelo (sem numeração).
+{\renewcommand{\thefootnote}{}%
+ \footnotetext{\hspace{-1.5em}\fontsize{8}{9.5}\selectfont
+ A. C. M. Barcella, M. G. L. Filho, P. K. Jesus, P. H. S. Tenório. Trabalho final da disciplina TE-251, ITA, 2026.}}
+% TODO(grupo): se quiserem seguir o modelo à risca, acrescentar os e-mails dos autores na nota acima.
+
+\resumo{Este trabalho apresenta um coletor de artigos científicos que consulta oito bases acadêmicas em paralelo, funde os registros duplicados e submete o título, o resumo e as palavras-chave de cada artigo a um modelo de linguagem de grande porte (LLM) executado localmente, que o classifica segundo critérios do pesquisador. O programa que envolve o modelo restringe a resposta a três classes, exige um trecho transcrito literalmente do resumo e isola as falhas de cada artigo. Em uma consulta sobre radar de abertura sintética aplicado à agricultura, 434 artigos foram triados, e os primeiros colocados pertenciam ao tema. Em uma consulta sobre velas solares em sistemas de asteroides, o modelo incluiu artigos sem relação com velas solares, apoiado em citações autênticas que não sustentavam a decisão. A análise indica que os controles abrangem o formato da resposta, mas não o seu conteúdo, e que não há aprovação humana por artigo.}
+
+\palavraschave{triagem de literatura, modelos de linguagem, garantia de inteligência artificial.}
+
+% ══════════════════════════════════════════════════════════════
+\section{Introdução}
+
+A revisão bibliográfica inicia-se por duas tarefas repetitivas: a execução da mesma consulta em diversas bases e a leitura de centenas de títulos e resumos para selecionar os trabalhos pertinentes. Os guias de revisão sistemática tratam essa seleção por título e resumo como uma etapa própria, que deve ser registrada e relatada \cite{kitchenham}, \cite{prisma}. Cada base acadêmica possui sintaxe de consulta, filtros, campos e limites de taxa próprios. A execução manual é lenta, e uma automação descuidada viola os termos de uso das bases ou produz uma lista de procedência desconhecida.
+
+Duas linhas de trabalho são próximas a este. A primeira é a infraestrutura aberta de metadados: OpenAlex \cite{openalex}, Semantic Scholar \cite{s2} e OpenCitations \cite{opencitations} disponibilizam metadados e citações por meio de interfaces de programação de aplicações (APIs), mas cada uma abrange apenas o próprio índice, e a integração dos resultados cabe a quem as consulta. A segunda é a triagem automatizada: classificadores de citações já foram empregados para reduzir o esforço de preparação de revisões sistemáticas \cite{cohen}, e ferramentas como Rayyan \cite{rayyan} e ASReview \cite{asreview} apoiam a triagem, mantendo uma pessoa responsável pela decisão sobre cada artigo. Nessas ferramentas, a busca nas bases e a triagem constituem etapas separadas.
+
+Os autores desenvolveram um coletor para Linux, em Python, que consulta em paralelo OpenAlex, Semantic Scholar, Crossref, arXiv, PubMed, Europe PMC, CORE e DOAJ, grava um arquivo CSV (valores separados por vírgula) por base e um arquivo consolidado sem duplicatas e, em seguida, classifica cada artigo do consolidado com um modelo de linguagem de grande porte (LLM, do inglês \emph{large language model}) executado localmente pelo Ollama. O produto final é o arquivo \cod{ranking.csv}, ordenado por uma pontuação e acompanhado de uma justificativa por artigo. O sistema é operado por uma interface web protegida por \emph{token} e conta com 220 testes automatizados executados sem acesso à internet.
+
+O emprego de um LLM nessa etapa traz um risco conhecido: o modelo produz texto fluente que pode contradizer a fonte ou não encontrar apoio nela \cite{ji}. Este artigo descreve a técnica adotada e os resultados efetivamente obtidos e discute, sobretudo, o grau de confiança que o resultado admite: o que o sistema não faz, em que pontos uma pessoa intervém, de onde provêm as afirmações do modelo e quais são as consequências de um erro do modelo.
+
+% ══════════════════════════════════════════════════════════════
+\section{Método}
+
+\subsection{Coleta e consolidação}
+
+Um orquestrador dispara uma tarefa assíncrona por base. Cada base dispõe de um limitador próprio, composto por um balde de fichas (\emph{token bucket}) e um semáforo: ao receber a resposta HTTP 429, a taxa é reduzida à metade, o cabeçalho \cod{Retry-After} é respeitado e a taxa somente volta a crescer, em 25\,\%, após 20 respostas bem-sucedidas consecutivas, sem ultrapassar o valor inicial. A falha de uma base não interrompe as demais; o relatório da execução registra o estado de cada base (\cod{ok}, \cod{parcial}, \cod{falhou} ou \cod{pulada}) e o respectivo motivo. Um prazo global, de 300\,s na interface, encerra as bases que ainda estejam em busca, as quais preservam os registros já gravados.
+
+Na consolidação, dois registros são considerados o mesmo artigo quando compartilham o identificador de objeto digital (DOI), o PMID, o PMCID ou o identificador arXiv, ou quando apresentam o mesmo título normalizado, com cinco ou mais palavras, e o mesmo ano. Após a fusão, permanecem apenas os artigos que possuem DOI \emph{e} resumo.
+
+\subsection{A técnica: triagem por LLM com saída estruturada e citação verificada}
+
+A técnica consiste na triagem de cada artigo por um LLM local, com a resposta restrita a um esquema e ancorada em um trecho literal do resumo. O modelo não decide isoladamente o que integra a revisão: ele propõe uma classe e uma justificativa, e o programa que o envolve (o \emph{harness}, implementado no módulo \cod{coletor/ranking.py}) decide se a resposta é aceita. A ideia de condicionar a geração a um texto-fonte provém da geração aumentada por recuperação \cite{rag}. Neste trabalho, a fonte é o resumo do próprio artigo, e a citação exigida torna verificável a origem da decisão.
+
+\subsubsection{Entrada do modelo} O modelo recebe um único \emph{prompt} por artigo, composto por quatro blocos: os critérios de triagem informados pelo pesquisador na interface e o título, o resumo e as palavras-chave provenientes do arquivo \cod{consolidado.csv}. O \emph{prompt} determina que esses textos sejam tratados apenas como material de consulta, que instruções neles contidas sejam ignoradas e que nada seja inferido a partir do artigo completo. Essa instrução constitui uma defesa parcial contra a injeção indireta de instruções, na qual o próprio texto processado pelo modelo veicula comandos \cite{greshake}. O modelo não recebe o texto completo, não acessa a internet e não tem acesso aos demais artigos.
+
+\subsubsection{Restrições impostas pelo harness} A Tabela~I resume os controles. A resposta contém três campos: \cod{justification}, \cod{quote} e \cod{match}. O esquema JSON é fornecido ao Ollama no parâmetro \cod{format} e validado novamente pela biblioteca Pydantic, que rejeita campos adicionais. A aderência admite apenas os valores 0, 0,5 e 1, e a citação deve ocorrer no resumo exatamente, como subcadeia. Qualquer violação atribui ao artigo o estado \cod{llm\_status = erro}, registra o motivo e o desloca para o final da classificação, sem interromper o processamento do lote.
+
+\begin{table}[!t]
+  \caption{Controles do harness sobre a resposta do modelo}
+  \label{tab:controles}
+  \centering\fontsize{8}{9.5}\selectfont
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{3.7cm}>{\raggedright\arraybackslash}p{4.6cm}@{}}
+    \toprule
+    \textbf{Controle} & \textbf{Comportamento impedido ou exigido} \\
+    \midrule
+    Esquema JSON em \cod{format} e Pydantic com \cod{extra = "forbid"} & Campo adicional, campo ausente ou texto livre fora do JSON \\
+    $m \in \{0;\,0{,}5;\,1\}$ & Notas intermediárias, como 0,7 \\
+    \cod{quote in abstract} & Citação inventada ou vazia \\
+    Resumo vazio $\Rightarrow$ erro, sem chamada & Decisão sem fonte \\
+    \cod{num\_predict = 1024} e \cod{done\_reason} & Aceitação de resposta truncada \\
+    \cod{think = False} & Raciocínio ilimitado antes do JSON \\
+    Exceção por artigo $\Rightarrow$ \cod{erro} & Interrupção do lote por uma falha \\
+    Arquivo de recuperação por artigo & Perda do trabalho em caso de cancelamento \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[!t]
+  \centering
+  \begin{tikzpicture}[
+      font=\fontsize{7}{8}\selectfont,
+      caixa/.style={draw, rounded corners=2pt, align=center, minimum width=2.6cm, minimum height=0.62cm, inner sep=2pt},
+      harness/.style={caixa, fill=black!8, line width=0.7pt},
+      humano/.style={caixa, fill=white, dashed},
+      seta/.style={-{Latex[length=1.6mm]}, line width=0.5pt},
+      node distance=0.36cm and 0.45cm]
+    \node[humano] (pesq) {Pesquisador\\(consulta, critérios, modelo,\\pesos, cancelamento)};
+    \node[caixa, below=of pesq] (ui) {Interface web\\(autenticação por \emph{token})};
+    \node[caixa, below=of ui] (orq) {Orquestrador\\(prazo global)};
+    \node[caixa, below left=0.36cm and -0.9cm of orq] (lim) {Limitador por base\\(429 $\rightarrow$ taxa/2)};
+    \node[caixa, below=of lim] (apis) {8 APIs acadêmicas\\e OpenCitations};
+    \node[caixa, below right=0.36cm and -0.9cm of orq] (cons) {Consolidador\\(fusão; DOI e resumo)};
+    \node[harness, below=of cons] (rank) {\emph{Harness} (\cod{ranking.py})\\\emph{prompt} $\cdot$ esquema $\cdot$\\citação literal $\cdot$ pontuação};
+    \node[caixa, below=of rank] (llm) {LLM local\\(Ollama)};
+    \node[caixa, below=0.5cm of apis] (saida) {\cod{ranking.csv}\\justificativa e evidência};
+    \draw[seta] (pesq) -- (ui);
+    \draw[seta] (ui) -- (orq);
+    \draw[seta] (orq) -| (lim);
+    \draw[seta] (lim) -- (apis);
+    \draw[seta] (orq) -| (cons);
+    \draw[seta] (cons) -- node[right, font=\fontsize{6}{7}\selectfont]{título, resumo, palavras-chave} (rank);
+    \draw[seta] ([xshift=-3mm]rank.south) -- node[left, font=\fontsize{6}{7}\selectfont]{\emph{prompt}} ([xshift=-3mm]llm.north);
+    \draw[seta] ([xshift=3mm]llm.north) -- node[right, font=\fontsize{6}{7}\selectfont]{JSON} ([xshift=3mm]rank.south);
+    \draw[seta] (rank.west) -- ++(-0.3,0) |- (saida.east);
+    \draw[seta, dashed] (saida.west) -- ++(-0.35,0) |- (pesq.west);
+  \end{tikzpicture}
+  \caption{Arquitetura do coletor. Em cinza, o harness que valida a resposta do modelo; em tracejado, o ponto de intervenção humana.}
+  \label{fig:arq}
+\end{figure}
+
+A Fig.~1 mostra a posição do \emph{harness}: entre o consolidador e o modelo e entre o modelo e o arquivo final. Nenhuma resposta do modelo chega ao arquivo \cod{ranking.csv} sem passar por ele.
+
+\subsection{Pontuação}
+
+Seja $\mathcal{C}$ o conjunto dos artigos do consolidado e, para cada artigo $i \in \mathcal{C}$, sejam $y_i$ o ano de publicação, $n_i$ o número de citações, $\tau_i$ o tipo de publicação e $Y$ o ano corrente. Para os artigos cuja resposta foi aceita, a pontuação é
+\begin{equation}
+  S_i = w_a\,m_i + w_r\,r_i + w_c\,c_i + w_t\,t_i ,
+\end{equation}
+em que $m_i \in \{0;\,0{,}5;\,1\}$ é a aderência atribuída pelo modelo e $r_i$, $c_i$ e $t_i$ são, respectivamente, os componentes de recência, de citações e de tipo, todos em $[0,1]$. Os pesos obedecem a
+\begin{equation}
+  \textstyle\sum_k w_k = 1, \quad 0{,}5 \le w_a \le 1, \quad 0 \le w_r, w_c, w_t \le 0{,}5 ,
+\end{equation}
+com o padrão $w_a = 0{,}70$ e $w_r = w_c = w_t = 0{,}10$; a interface permite alterá-los dentro desses limites.
+
+Os componentes de recência e de citações usam a normalização mínimo--máximo
+\begin{equation}
+  \mathcal{N}(x;\,a,\,b) =
+  \begin{cases}
+    0{,}5, & x \text{ ausente ou } a = b,\\[2pt]
+    \left[\dfrac{x - a}{b - a}\right]_{0}^{1}, & \text{caso contrário},
+  \end{cases}
+\end{equation}
+em que $[\,\cdot\,]_0^1$ denota o truncamento ao intervalo $[0,1]$, calculada sobre todo o conjunto $\mathcal{C}$. A recência é
+\begin{equation}
+  r_i = \mathcal{N}\big(y_i;\ \min_{j \in \mathcal{C}} y_j,\ \max_{j \in \mathcal{C}} y_j\big).
+\end{equation}
+Para não favorecer artigos antigos apenas por terem acumulado citações durante mais tempo, utiliza-se a taxa anual
+\begin{equation}
+  \rho_i = \frac{\max(n_i, 0)}{\max(1,\ Y - y_i + 1)} ,
+\end{equation}
+indefinida quando $n_i$ ou $y_i$ é ausente. Como essa taxa tem distribuição assimétrica, o componente de citações é calculado na escala logarítmica:
+\begin{equation}
+  c_i = \mathcal{N}\big(\ln(1 + \rho_i);\ \ln(1 + \rho_{\min}),\ \ln(1 + \rho_{\max})\big),
+\end{equation}
+em que $\rho_{\min}$ e $\rho_{\max}$ são os extremos de $\rho$ em $\mathcal{C}$. O componente de tipo é dado por uma tabela de valores configurável:
+\begin{equation}
+  t_i = v(\tau_i) =
+  \begin{cases}
+    1{,}0, & \tau_i \in \{\text{artigo, revisão}\},\\
+    0{,}8, & \tau_i = \text{conferência},\\
+    0{,}6, & \tau_i = \text{livro ou capítulo},\\
+    0{,}5, & \tau_i = \text{\emph{preprint}} \text{ ou ausente},\\
+    0{,}4, & \text{demais tipos}.
+  \end{cases}
+\end{equation}
+A pontuação é arredondada a três casas decimais, e o arquivo é ordenado por $S_i$ decrescente, com os artigos em estado \cod{erro} ao final.
+
+Uma consequência de (1) e (2) é relevante para a discussão. Como $r_i, c_i, t_i \in [0,1]$, os três últimos termos somam no máximo $1 - w_a$. Para dois artigos $i$ e $j$ com $m_i > m_j$, tem-se
+\begin{equation}
+  S_i - S_j \;\ge\; w_a\,(m_i - m_j) - (1 - w_a).
+\end{equation}
+Para $m_i = 1$ e $m_j = 0$, o limite inferior é $2w_a - 1 \ge 0$; logo, um artigo incluído nunca é superado por um excluído. Para classes adjacentes ($m_i - m_j = 0{,}5$), o limite é $1{,}5\,w_a - 1$, não negativo apenas se $w_a \ge 2/3$. Com o padrão $w_a = 0{,}70$, a ordem entre classes é preservada; com $w_a = 0{,}58$, configuração usada em uma das execuções, um artigo \cod{duvidoso} recente e muito citado pode superar um artigo \cod{incluido}.
+
+\subsection{Requisitos refinados com um agente de código}
+
+O sistema foi implementado com o auxílio de um agente de código (Claude Code), orientado por um arquivo de instruções. As regras principais eram: escopo fechado; proibição de inventar campos de API, de modo que o mapeamento de cada base fosse escrito a partir de respostas reais gravadas em um teste prático; e alteração de requisitos somente por regra escrita ou por decisão dos autores. O registro dessas decisões, que distingue as automáticas das tomadas pelos autores, consta da seção 15 da especificação do projeto.
+
+% ══════════════════════════════════════════════════════════════
+\section{Resultados}
+
+As duas execuções descritas a seguir foram realizadas pela interface web. Segundo as anotações dos autores, ambas utilizaram o modelo \cod{qwen3.8:27b-mtp-bf16}, executado localmente pelo Ollama, com temperatura 0,1. Esse identificador não é gravado na pasta da execução (Seção~IV-D). Nenhuma das execuções dispõe de rotulação manual; por isso, não há medida de precisão ou de revocação, e os valores da Tabela~II são contagens extraídas dos relatórios e do arquivo \cod{ranking.csv}. O conjunto de 220 testes automatizados foi aprovado integralmente em 13/11/2026.
+
+\begin{table}[!t]
+  \caption{Contagens das duas execuções}
+  \label{tab:resultados}
+  \centering\fontsize{8}{9.5}\selectfont
+  \begin{tabular}{@{}lrr@{}}
+    \toprule
+    & \textbf{SAR e agricultura} & \textbf{Vela solar} \\
+    & \textbf{07/11/2026} & \textbf{08/11/2026} \\
+    \midrule
+    Bases com artigos / bases ativas & 5 / 8 & 4 / 8 \\
+    Registros recebidos das bases & 585 & 323 \\
+    Duplicatas removidas & 24 & 52 \\
+    Descartados sem DOI ou resumo & 127 & 138 \\
+    Artigos triados & 434 & 133 \\
+    Respostas aceitas (\cod{ok}) & 417 & 92 \\
+    Rejeitadas (citação não literal) & 17 & 41 \\
+    \cod{incluido} / \cod{duvidoso} / \cod{excluido} & 54 / 5 / 358 & 91 / 1 / 0 \\
+    Tempo de busca (s) & 300,1 & 29,6 \\
+    Tempo de triagem (s) & 1915,5 & 324,9 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Caso com resposta adequada: radar de abertura sintética na agricultura}
+
+A consulta foi \cod{SAR AND Agriculture}, em que SAR designa o radar de abertura sintética, com limite de 200 artigos por base. Três bases falharam sem afetar as demais: OpenAlex, por chave inválida (HTTP 401); Semantic Scholar, por esgotar as tentativas após seis respostas 429; e PubMed, por atingir o prazo de 300\,s sem gravar nenhum artigo. CORE e DOAJ terminaram no estado \cod{parcial} pelo mesmo prazo. Os critérios de triagem continham definições do que se entende por SAR e por agricultura e um procedimento de decisão em cinco passos, que inclui a exclusão de outros significados da sigla, como \emph{systemic acquired resistance}.
+
+Os cinco primeiros colocados, com pontuações entre 0,926 e 0,950, tratam de SAR aplicado a culturas agrícolas (arroz, dendê, milho e culturas em geral), e as justificativas indicam o passo e os critérios aplicados. Todos os 54 artigos classificados como \cod{incluido} contêm os termos ``SAR'' ou ``radar'' no título ou no resumo; essa verificação atesta apenas a presença do termo, e não a relevância. Dezessete respostas (3,9\,\%) foram rejeitadas porque a citação não constava literalmente do resumo.
+
+\subsection{Caso sem resposta adequada: velas solares em sistemas de asteroides}
+
+A consulta foi digitada como \cod{'("solar sail") AND ("asteroid system" OR "binary asteroid")'}, incluindo os apóstrofos. O sistema aceitou os apóstrofos como parte da consulta e os repassou às bases; no arXiv, por exemplo, a consulta tornou-se \cod{all:' AND all:"solar sail" ...}. As bases arXiv, PubMed e Europe PMC retornaram zero resultados com estado \cod{ok}, e o DOAJ respondeu com HTTP 403. O relatório, portanto, não permite distinguir a ausência de literatura de uma consulta mal traduzida.
+
+Na triagem, o modelo não excluiu nenhum artigo e classificou 91 como \cod{incluido}. Desses 91, apenas 27 contêm a palavra ``sail'' no título ou no resumo; os outros 64 não mencionam velas solares, o que os enquadra no critério de exclusão E2 (``estuda asteroides sem utilizar velas solares''). Os dois primeiros colocados, com pontuações 0,975 e 0,964, são estudos de química de amostras dos asteroides Ryugu e Bennu, e as justificativas afirmam que ``o artigo estuda explicitamente métodos de controle de atitude de velas solares (I1)''. As citações foram aceitas porque eram trechos autênticos dos resumos, embora não sustentassem a afirmação. Além disso, 41 das 133 respostas (31\,\%) foram rejeitadas por citação não literal.
+
+Uma execução anterior, no mesmo dia, com a mesma consulta e os mesmos critérios, falhou no OpenAlex (HTTP 401), triou 70 artigos e apresentou o mesmo padrão: nenhum excluído e 40 incluídos, dos quais apenas 10 mencionam ``sail''; o modelo dessa execução não foi anotado. Os critérios dessa consulta consistiam em uma lista de inclusões e exclusões, sem procedimento de decisão. Duas consultas não bastam para atribuir a diferença de desempenho aos critérios, embora essa seja a diferença mais evidente entre os dois casos.
+
+% ══════════════════════════════════════════════════════════════
+\section{Discussão: garantia do sistema}
+
+A discussão adota as características de confiabilidade do NIST AI RMF \cite{nist}, em particular validade, transparência e responsabilização, aplicadas aos componentes do próprio sistema.
+
+\subsection{Limites do sistema}
+
+O sistema não examina o texto completo dos artigos e não verifica se a justificativa é compatível com a citação e com o critério alegado: a validação comprova que o trecho existe, mas não que ele sustenta a decisão, como mostra o caso das velas solares. O sistema não mede a própria precisão, pois não há conjunto rotulado manualmente. Os artigos descartados por ausência de DOI ou de resumo (127 e 138 nos dois casos) são contados, mas não listados; a contagem atende ao fluxograma do PRISMA \cite{prisma}, mas não permite verificar se algum artigo relevante foi excluído. Instruções ocultas em um resumo \cite{greshake} não são detectadas, além da instrução do \emph{prompt} que determina ignorá-las. A consulta não é validada quanto a caracteres espúrios, como os apóstrofos do segundo caso. A base SciELO não é consultada, pois não oferece busca por palavra-chave via API e seu arquivo \cod{robots.txt} proíbe o acesso automatizado. Por fim, o sistema não decide o que integra a revisão: o arquivo \cod{ranking.csv} é apenas uma ordem de leitura sugerida.
+
+\subsection{Intervenção humana}
+
+Na triagem, a intervenção humana ocorre antes e depois da execução do modelo, nunca durante. Antes, o pesquisador define a consulta e os critérios e escolhe o modelo, entre os instalados no Ollama, os pesos e a temperatura. Durante a execução, a única ação disponível é o cancelamento (\cod{POST /api/cancel}), que interrompe a coleta ou a triagem antes do artigo seguinte e preserva os arquivos parciais. Depois, a interface apresenta cada justificativa acompanhada da evidência.
+
+As diretrizes de interação humano--IA de Amershi et al. \cite{amershi} recomendam, entre outros pontos, que o sistema explicite por que tomou uma decisão e que facilite a correção pelo usuário. O coletor atende à primeira recomendação, por meio da justificativa e da evidência, mas não à segunda. Não há etapa de aprovação ou correção por artigo: a interface não permite alterar o campo \cod{llm\_label}, nem assinalar uma justificativa como incorreta, e nenhuma correção retorna ao modelo ou aos critérios. O efeito manifesta-se no segundo caso: 64 inclusões sem a palavra ``sail'' alcançaram o topo da classificação, e a única barreira entre elas e a revisão é a leitura das justificativas por uma pessoa. Nenhum mecanismo exige essa leitura.
+
+No desenvolvimento, ao contrário, havia uma pessoa no fluxo: o agente de código deveria interromper o trabalho e consultar os autores em qualquer caso não coberto pelas regras, além de aguardar aprovação ao final de cada fase. Quatro alterações de requisitos foram registradas como decisões dos autores, entre elas a de manter opcional a chave do Semantic Scholar, mesmo com 57 de 63 chamadas respondidas com HTTP 429 no teste prático. A análise de perigos do sistema, conduzida pelo método STPA (\emph{System-Theoretic Process Analysis}) \cite{leveson}, \cite{stpa}, foi redigida com apoio de LLM, e sua revisão humana permanece pendente.
+
+\subsection{Proveniência das afirmações do modelo}
+
+O modelo recebe apenas título, resumo e palavras-chave, todos provenientes das APIs. Quando um campo está presente em mais de uma base, o consolidado adota uma ordem de prioridade fixa; para o resumo, a ordem é PubMed, Europe PMC, OpenAlex e as demais. A citação é o único elemento da resposta com proveniência verificável, pois remete a um trecho exato do resumo daquele registro. A justificativa e o número do critério não são verificados.
+
+Quando a fonte não cobre a pergunta, três situações são possíveis. Sem resumo, o artigo não chega ao modelo: é descartado na consolidação ou, caso a alcance, recebe o estado \cod{erro} sem que o modelo seja chamado. Com resumo, mas sem trecho que sustente a decisão, o modelo pode transcrever um trecho irrelevante, como nos casos de Ryugu e Bennu, e a resposta é aceita. Na falta de metadados, ano, citações ou tipo recebem o valor neutro 0,5 em (3) e (7), sem que isso seja sinalizado na classificação.
+
+\subsection{Consequências de erros do modelo}
+
+\subsubsection{Classe incorreta} Por (8), com $w_a \ge 0{,}5$, um artigo com $m = 1$ nunca fica abaixo de um artigo com $m = 0$; recência, citações e tipo ordenam os artigos apenas dentro de cada classe ou, com $w_a < 2/3$, entre classes adjacentes. Um erro de classe, portanto, não é compensado pelos metadados: desloca o artigo do final para o bloco superior da classificação, ou o inverso, e nenhum outro componente confere a classe atribuída.
+
+\subsubsection{Fato inventado} Quando o fato inventado é a citação, o \emph{harness} o detecta: houve 17 e 41 rejeições nos dois casos, e esses artigos foram deslocados para o final com o motivo registrado. Quando o fato inventado está na justificativa, acompanhada de uma citação autêntica, a resposta é aceita; trata-se de uma afirmação sem apoio na fonte, no sentido de Ji et al. \cite{ji}, que o \emph{harness} não identifica. Esse é o modo de falha evidenciado pelo segundo caso, e nenhum teste o cobre, pois os testes da triagem simulam as respostas do Ollama.
+
+\subsubsection{Mudança de versão} O modelo é escolhido a cada execução, e o padrão definido no código (\cod{qwen3.5:0.8b}) difere do utilizado nos resultados (\cod{qwen3.8:27b-mtp-bf16}). A pasta da execução registra a configuração da busca, os critérios e os tempos, mas não o modelo, a versão, os pesos ou a temperatura. Uma substituição do modelo ou uma atualização realizada pelo Ollama ocorre sem registro, e o arquivo \cod{ranking.csv} não identifica o modelo que o produziu. Com temperatura 0,1, nem mesmo a mesma versão assegura respostas idênticas. Como os 220 testes não invocam o modelo, uma mudança de versão não provoca a falha de nenhum teste.
+
+% ══════════════════════════════════════════════════════════════
+\section{Conclusão}
+
+Demonstrou-se que o coletor realiza a busca em oito bases em paralelo sem que a falha de uma afete as demais, que funde duplicatas entre bases e que o \emph{harness} impede o modelo de devolver classes fora de $\{0;\,0{,}5;\,1\}$, campos inesperados, respostas truncadas ou citações ausentes do resumo. Esses controles possuem testes, e os 220 testes são aprovados sem acesso à internet. Em um tema com critérios detalhados, os primeiros colocados pertenciam ao tema. Mostrou-se também, por (8), que a pontuação preserva a separação entre artigos incluídos e excluídos para qualquer configuração de pesos admitida pela interface.
+
+Não foi alcançada a garantia sobre o conteúdo da decisão. O segundo caso apresenta uma resposta bem formatada, com citação autêntica e, ainda assim, incorreta, que o sistema não é capaz de detectar. Permanecem como trabalhos futuros a medida de precisão contra rotulação manual, um verificador da compatibilidade entre justificativa e citação, a listagem dos artigos descartados, a validação da consulta e o registro do modelo, dos pesos e da temperatura em cada execução. Enquanto esses elementos não existirem, o arquivo \cod{ranking.csv} deve ser tratado como triagem assistida, e a decisão de incluir um artigo continua a caber a quem lê a justificativa.
+
+% ══════════════════════════════════════════════════════════════
+% Referências: sem numeração de seção, 8 pt, formato dos exemplos do modelo.
+% TODO(grupo): manter só o que o Grupo de fato leu.
+\section*{Referências}
+{\fontsize{8}{9.5}\selectfont
+\renewcommand{\section}[2]{}%
+\begin{thebibliography}{15}
+\setlength{\itemsep}{1pt}
+
+\bibitem{kitchenham}
+B. Kitchenham, S. Charters, ``Guidelines for performing systematic literature reviews in software engineering'', Keele University e Durham University, Relatório Técnico EBSE-2007-01, versão 2.3, 2007.
+
+\bibitem{prisma}
+M. J. Page \emph{et al.}, ``The PRISMA 2020 statement: an updated guideline for reporting systematic reviews'', \emph{BMJ}, vol. 372, n71, Mar. 2021.
+
+\bibitem{openalex}
+J. Priem, H. Piwowar, R. Orr, ``OpenAlex: a fully-open index of scholarly works, authors, venues, institutions, and concepts'', arXiv:2205.01833, 2022.
+
+\bibitem{s2}
+R. Kinney \emph{et al.}, ``The Semantic Scholar open data platform'', arXiv:2301.10140, 2023.
+
+\bibitem{opencitations}
+S. Peroni, D. Shotton, ``OpenCitations, an infrastructure organization for open scholarship'', \emph{Quantitative Science Studies}, vol. 1, n. 1, p. 428--444, 2020.
+
+\bibitem{cohen}
+A. M. Cohen, W. R. Hersh, K. Peterson, P.-Y. Yen, ``Reducing workload in systematic review preparation using automated citation classification'', \emph{J. Am. Med. Inform. Assoc.}, vol. 13, n. 2, p. 206--219, 2006.
+
+\bibitem{rayyan}
+M. Ouzzani, H. Hammady, Z. Fedorowicz, A. Elmagarmid, ``Rayyan---a web and mobile app for systematic reviews'', \emph{Systematic Reviews}, vol. 5, art. 210, 2016.
+
+\bibitem{asreview}
+R. van de Schoot \emph{et al.}, ``An open source machine learning framework for efficient and transparent systematic reviews'', \emph{Nature Machine Intelligence}, vol. 3, p. 125--133, 2021.
+
+\bibitem{ji}
+Z. Ji \emph{et al.}, ``Survey of hallucination in natural language generation'', \emph{ACM Computing Surveys}, vol. 55, n. 12, art. 248, 2023.
+
+\bibitem{rag}
+P. Lewis \emph{et al.}, ``Retrieval-augmented generation for knowledge-intensive NLP tasks'', in \emph{Proc. 34th Conf. Neural Information Processing Systems (NeurIPS)}, Vancouver, Canada, 2020, p. 9459--9474.
+
+\bibitem{greshake}
+K. Greshake \emph{et al.}, ``Not what you've signed up for: compromising real-world LLM-integrated applications with indirect prompt injection'', in \emph{Proc. 16th ACM Workshop on Artificial Intelligence and Security (AISec)}, Copenhagen, Denmark, 2023, p. 79--90.
+
+\bibitem{nist}
+National Institute of Standards and Technology, \emph{Artificial Intelligence Risk Management Framework (AI RMF 1.0)}, NIST AI 100-1. Gaithersburg, MD: NIST, 2023.
+
+\bibitem{amershi}
+S. Amershi \emph{et al.}, ``Guidelines for human-AI interaction'', in \emph{Proc. CHI Conf. Human Factors in Computing Systems}, Glasgow, UK, 2019, p. 1--13.
+
+\bibitem{leveson}
+N. G. Leveson, \emph{Engineering a Safer World: Systems Thinking Applied to Safety}. Cambridge, MA: MIT Press, 2011.
+
+\bibitem{stpa}
+N. G. Leveson, J. P. Thomas, \emph{STPA Handbook}. Cambridge, MA: MIT, 2018.
+
+\end{thebibliography}}
+
+\end{document}
